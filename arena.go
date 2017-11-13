@@ -16,26 +16,28 @@ func (a *Arena) Get(id int) Node {
 	return a.List[id]
 }
 
-func (a *Arena) FindByAttr(k string, v string) *Node {
+func (a *Arena) FindByAttr(k string, v string) []Node {
+	res := []Node{}
 	for _, n := range a.List {
 		for _, attr := range n.Attr {
 			if attr.Key == k && attr.Val == v {
-				return &n
+				res = append(res, n)
 			}
 		}
 	}
-	return nil
+	return res
 }
 
-func (a *Arena) FindNodeIdByAttr(k string, v string) int {
+func (a *Arena) FindNodeIdByAttr(k string, v string) []int {
+	res := []int{}
 	for id, n := range a.List {
 		for _, attr := range n.Attr {
 			if attr.Key == k && attr.Val == v {
-				return id
+				res = append(res, id)
 			}
 		}
 	}
-	return -1
+	return res
 }
 
 func (a *Arena) AddChild(p int, c int) {

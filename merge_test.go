@@ -31,8 +31,8 @@ func TestMergeNodes(t *testing.T) {
 	a := NewArena(*n)
 	id1 := a.FindNodeIdByAttr("id", "block_1")
 	id2 := a.FindNodeIdByAttr("id", "block_3")
-	a1 := a.Clone(id1)
-	a2 := a.Clone(id2)
+	a1 := a.Clone(id1[0])
+	a2 := a.Clone(id2[0])
 
 	res := Merge(a1, a2, 0, 0)
 	t.Log(res.PrintList())

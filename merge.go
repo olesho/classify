@@ -42,12 +42,12 @@ func makePairs(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (r *C
 			for _, a1 := range n1.Attr {
 				for _, a2 := range n2.Attr {
 					if a1.Key == a2.Key {
-						r.Rate += attrKeyPoints
+						r.Sum += attrKeyPoints
 						r.Count += attrKeyPoints
 						attr := html.Attribute{Key: a1.Key}
 						if a1.Val == a2.Val {
 							attr.Val = a1.Val
-							r.Rate += len(a1.Val)
+							r.Sum += len(a1.Val)
 							r.Count += len(a2.Val)
 						}
 						//						twin.Attr = append(twin.Attr, attr)
@@ -125,3 +125,9 @@ func MergeShallow(n1 Node, n2 Node) *Node {
 	}
 	return nil
 }
+
+/*
+func DiffShallow(n1 Node, n2 Node) *Node {
+
+}
+*/

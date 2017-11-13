@@ -32,7 +32,7 @@ func bestOfSquareMatrix(matrix [][]*CmpResult, checked_i []bool, checked_j []boo
 		if !checked_i[i] {
 			for j, _ := range row {
 				if !checked_j[j] && matrix[i][j] != nil {
-					sum := matrix[i][j].Result()
+					sum := matrix[i][j].Rate()
 					if sum > max_sum {
 						max_val = matrix[i][j]
 						max_sum = sum
@@ -78,17 +78,17 @@ func (a *Arena) CmpDeepRate(id1, id2 int) *CmpResult {
 }
 
 type CmpResult struct {
-	Rate  int
+	Sum   int
 	Count int
 }
 
 func (r *CmpResult) Append(addition CmpResult) {
 	r.Count += addition.Count
-	r.Rate += addition.Rate
+	r.Sum += addition.Sum
 }
 
-func (r *CmpResult) Result() float64 {
-	return float64(r.Rate) / float64(r.Count)
+func (r *CmpResult) Rate() float64 {
+	return float64(r.Sum) / float64(r.Count)
 }
 
 func (a *Arena) CmpChildren(n1 Node, n2 Node) (r *CmpResult) {
@@ -117,7 +117,7 @@ func (a *Arena) CmpChildren(n1 Node, n2 Node) (r *CmpResult) {
 			checked_i[max_i] = true
 			checked_j[max_j] = true
 			r.Count += val.Count
-			r.Rate += val.Rate
+			r.Sum += val.Sum
 			max_i, max_j, val = bestOfSquareMatrix(matrix, checked_i, checked_j)
 		}
 

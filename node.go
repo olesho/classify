@@ -163,10 +163,10 @@ func CmpAttr(attr1, attr2 []html.Attribute) *CmpResult {
 		for _, a1 := range attr1 {
 			for _, a2 := range attr2 {
 				if a1.Key == a2.Key && a1.Key != "class" && a2.Key != "class" {
-					r.Rate += attrKeyPoints
+					r.Sum += attrKeyPoints
 					valueRate := CmpStrings(a1.Val, a2.Val)
 					valueRate.Count *= attrValPoints
-					valueRate.Rate *= attrValPoints
+					valueRate.Sum *= attrValPoints
 					r.Append(valueRate)
 				}
 			}
@@ -194,13 +194,13 @@ func CmpAttr(attr1, attr2 []html.Attribute) *CmpResult {
 		for _, c1 := range classes1 {
 			for _, c2 := range classes2 {
 				if c1 == c2 {
-					r.Rate += classPoints
+					r.Sum += classPoints
 				}
 			}
 		}
 
 		//double?
-		r.Rate *= 2
+		r.Sum *= 2
 
 		return r
 	}
@@ -234,11 +234,42 @@ func (a *Arena) Path(n int) string {
 	return a.Get(n).String()
 }
 
+func (a *Arena) PathArray(n int) []int {
+	init := make([]int, 0)
+	return a.pathArray(init, n)
+}
+
+// iterate all nodes up to root
+func (a *Arena) pathArray(init []int, n int) []int {
+	parent := a.Get(n).Parent
+	if parent > 0 {
+		return a.pathArray(append(init, n), parent)
+	}
+	return append(init, n)
+}
+
 func (a *Arena) Stringify(nodeId int) string {
 	n := a.Get(nodeId)
 	res := n.String() + "\n"
 	for _, c := range n.Children {
 		res += "  " + a.Stringify(c)
+	}
+	return res
+}
+
+func (a *Arena) StringifyInformation(nodeId int) string {
+	n := a.Get(nodeId)
+	var res string
+	if n.Type == html.TextNode {
+		res = n.Data + "\n"
+	}
+
+	if n.Type == html.ElementNode && n.Data == "img" {
+		res = n.GetAttr("src") + "\n"
+	}
+
+	for _, c := range n.Children {
+		res += "  " + a.StringifyInformation(c)
 	}
 	return res
 }
@@ -249,4 +280,13 @@ func (n Node) printAttr() string {
 		res += a.Key + "='" + a.Val + "', "
 	}
 	return res
+}
+
+func (n Node) GetAttr(key string) string {
+	for _, a := range n.Attr {
+		if a.Key == key {
+			return a.Val
+		}
+	}
+	return ""
 }

@@ -121,6 +121,6 @@ func TestCloneArena(t *testing.T) {
 	a := NewArena(*n)
 	b := NewArenaRoot()
 	id := a.FindNodeIdByAttr("id", "block_1")
-	a.Clone(id)
+	a.Clone(id[0])
 	t.Log(b.PrintList())
 }

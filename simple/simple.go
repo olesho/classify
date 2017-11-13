@@ -27,7 +27,7 @@ func (c *SimpleClassificator) Classify(n int) {
 	for i, bag := range c.bags.List {
 		res := c.CmpColumn(bag.Content[0], n)
 		if res != nil {
-			val := res.Result()
+			val := res.Rate()
 			if val > max {
 				max = val
 				max_i = i
