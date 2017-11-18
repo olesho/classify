@@ -63,13 +63,13 @@ func CmpStrings(s1 string, s2 string) CmpResult {
 	return CmpResult{r * 2, len(s1) + len(s2)}
 }
 
-func (a *Arena) CmpDeepRate(id1, id2 int) *CmpResult {
-	n1 := a.Get(id1)
-	n2 := a.Get(id2)
+func CmpDeepRate(a1 *Arena, a2 *Arena, id1, id2 int) *CmpResult {
+	n1 := a1.Get(id1)
+	n2 := a2.Get(id2)
 	r := CmpShallow(n1, n2)
 
 	if r != nil {
-		child_r := a.CmpChildren(n1, n2)
+		child_r := CmpChildren(a1, a2, n1, n2)
 		if child_r != nil {
 			r.Append(*child_r)
 		}
@@ -91,7 +91,7 @@ func (r *CmpResult) Rate() float64 {
 	return float64(r.Sum) / float64(r.Count)
 }
 
-func (a *Arena) CmpChildren(n1 Node, n2 Node) (r *CmpResult) {
+func CmpChildren(a1 *Arena, a2 *Arena, n1 Node, n2 Node) (r *CmpResult) {
 	li := len(n1.Children)
 	lj := len(n2.Children)
 
@@ -108,7 +108,7 @@ func (a *Arena) CmpChildren(n1 Node, n2 Node) (r *CmpResult) {
 		for i := 0; i < li; i++ {
 			matrix[i] = make([]*CmpResult, lj)
 			for j := 0; j < lj; j++ {
-				matrix[i][j] = a.CmpDeepRate(n1.Children[i], n2.Children[j])
+				matrix[i][j] = CmpDeepRate(a1, a2, n1.Children[i], n2.Children[j])
 			}
 		}
 

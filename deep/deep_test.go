@@ -24,30 +24,33 @@ func TestBBC(t *testing.T) {
 	}
 	a := classify.NewArena(*n)
 
-	//ids := a.FindNodeIdByAttr("class", "media-list__item media-list__item--4")
-	//t.Log(ids)
-
 	c := NewDeepClassificator(a)
 	c.Run()
 
-	//bag := c.bags.List[3]
-	//t.Log("Bag size:", len(bag.Content), "Bag rate:", bag.Rate)
+	/*
+		for bIndex, bag := range c.bags.List {
+			t.Log("Bag:", bIndex, "Bag size:", len(bag.Content), "Bag rate:", bag.Rate, "Bag sum:", bag.Sum)
+			//t.Log(bag.Content)
+			for _, i := range bag.Content {
+				//t.Log(c.Get(i).String())
+				t.Log("Item:", i)
+				t.Log(c.StringifyInformation(i))
+			}
+			t.Log("=================================================================================================")
+			if bIndex == 10 {
+				break
+			}
+		}
+	*/
 
-	for bIndex, bag := range c.bags.List {
-		t.Log("Bag:", bIndex, "Bag size:", len(bag.Content), "Bag rate:", bag.Rate, "Bag sum:", bag.Sum)
-		t.Log(bag.Content)
-		for _, i := range bag.Content {
-			//t.Log(c.Get(i).String())
-			t.Log(c.StringifyInformation(i))
-		}
-		t.Log("=================================================================================================")
-		if bIndex == 10 {
-			break
-		}
+	bag := c.bags.List[0]
+	for _, i := range bag.Content {
+		t.Log(c.Path(i))
 	}
 
-	//path := classify.GeneratePath(&c.Arena, bag)
-	//t.Log(path)
-	//pattern := classify.GeneratePattern(&c.Arena, bag)
-	//t.Log(pattern.PrintList())
+	path := classify.GeneratePath(&c.Arena, bag)
+	t.Log(path)
+	pattern := classify.GeneratePattern(&c.Arena, bag)
+	t.Log(pattern.PrintList())
+
 }

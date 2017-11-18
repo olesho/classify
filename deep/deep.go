@@ -34,7 +34,7 @@ func (c *DeepClassificator) Classify(n int) {
 	for i, bag := range c.bags.List {
 		if len(bag.Content) > 0 {
 			if bag.Content[0] != n {
-				r := c.CmpDeepRate(bag.Content[0], n)
+				r := classify.CmpDeepRate(&c.Arena, &c.Arena, bag.Content[0], n)
 				if r != nil {
 					val := r.Rate()
 					if val > maxRate {
@@ -46,9 +46,7 @@ func (c *DeepClassificator) Classify(n int) {
 			}
 		}
 	}
-	//if maxResult != nil {
 	c.put(n, bestBagIndex, maxRate, maxResult)
-	//}
 }
 
 // puts new comparation result for a node into bag
@@ -73,33 +71,6 @@ func (c *DeepClassificator) put(n int, bestBagIndex int, maxRate float64, maxRes
 			return
 		}
 	}
-
-	// create new bag
-	/*
-		newBag := classify.Bag{
-			Content: []int{n},
-			Rate:    maxRate,
-		}
-
-		// get rid of nested bags
-
-			for i, b := range c.bags.List {
-				// remove nested bag
-				if c.bagNested(newBag, b) {
-					return
-				}
-
-				// or replace nested bag
-				if c.bagNested(b, newBag) {
-					c.bags.List[i] = newBag
-					return
-				}
-			}
-
-
-		// append new bag
-		c.bags.List = append(c.bags.List, newBag)
-	*/
 }
 
 func (c *DeepClassificator) filterNested() {

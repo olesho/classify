@@ -20,14 +20,16 @@ func Merge(a1, a2 *Arena, id1, id2 int) *Arena {
 
 func build(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord, dest *Arena, destId int) {
 	resNode := MergeShallow(a1.Get(id1), a2.Get(id2))
-	dest.List = append(dest.List, *resNode)
-	resId := len(dest.List) - 1
-	dest.AddChild(destId, resId)
+	if resNode != nil {
+		dest.List = append(dest.List, *resNode)
+		resId := len(dest.List) - 1
+		dest.AddChild(destId, resId)
 
-	for _, coord := range pairs[id1][id2] {
-		build(a1, a2, a1.Get(id1).Children[coord.i], a2.Get(id2).Children[coord.j], pairs, dest, resId)
-		//dest.List = append(dest.List, *child)
-		//dest.AddChild(resId, len(dest.List)-1)
+		for _, coord := range pairs[id1][id2] {
+			build(a1, a2, a1.Get(id1).Children[coord.i], a2.Get(id2).Children[coord.j], pairs, dest, resId)
+			//dest.List = append(dest.List, *child)
+			//dest.AddChild(resId, len(dest.List)-1)
+		}
 	}
 }
 
