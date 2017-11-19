@@ -31,33 +31,6 @@ func (c *MergeClassificator) Bags() Bags {
 	return c.bags
 }
 
-/*
-func (c *MergeClassificator) Classify(n int) {
-	var maxRate float64 = 0
-	var bestBagIndex = -1
-	for i, bag := range c.bags.List {
-		if len(bag.Content) > 0 {
-			if i != n {
-				var r *classify.CmpResult = nil
-				if bag.Arena == nil {
-					r = classify.CmpDeepRate(c.Arena, c.Arena, i, n)
-				} else {
-					r = classify.CmpDeepRate(bag.Arena, c.Arena, 0, n)
-				}
-				if r != nil {
-					val := r.Rate()
-					if val > maxRate {
-						maxRate = val
-						bestBagIndex = i
-					}
-				}
-			}
-		}
-	}
-	c.put(n, bestBagIndex, maxRate)
-}
-*/
-
 func (c *MergeClassificator) cmp(n1, n2 int) float64 {
 	bag1 := c.bags.List[n1]
 	bag2 := c.bags.List[n2]
@@ -109,7 +82,8 @@ func (c *MergeClassificator) merge(n1, n2 int) bool {
 		index2 = n2
 	}
 
-	fmt.Println("Merge bags:", n1, "<=", n2)
+	//fmt.Println("Merge bags:", n1, "<=", n2)
+
 	newArena := classify.Merge(arena1, arena2, index1, index2)
 	if len(newArena.List) > 0 {
 		newBag := Bag{
@@ -118,81 +92,18 @@ func (c *MergeClassificator) merge(n1, n2 int) bool {
 		}
 
 		if newBag.Efficacy() > c.bags.List[n1].Efficacy() {
-			fmt.Println(newBag.Efficacy())
 			c.bags.List[n1] = newBag
 			c.bags.List[n2].Clear()
+
 			return true
 		}
 	}
 
 	return false
-
-	/*
-			if c.bags.List[bestBagIndex].Arena == nil {
-				fmt.Println("Merge nodes:", n, "<=>", bestBagIndex)
-				newArena = classify.Merge(c.Arena, c.Arena, bestBagIndex, n)
-				content = []int{n, bestBagIndex}
-			} else {
-				fmt.Println("Merge bag:", bestBagIndex, "<=>", n)
-				newArena = classify.Merge(c.bags.List[bestBagIndex].Arena, c.Arena, 0, n)
-				content = append(c.bags.List[bestBagIndex].Content, n)
-			}
-
-
-		if len(newArena.List) > 0 {
-			maxResult = Bag{
-				Arena:   newArena,
-				Content: content,
-			}
-			if maxResult.Efficacy() > c.bags.List[bestBagIndex].Efficacy() {
-				fmt.Println(maxResult.Efficacy())
-				c.bags.List[bestBagIndex] = maxResult
-				c.bags.List[n].Clear()
-			}
-
-			return
-		}
-	*/
 }
 
 /*
-// puts new comparation result for a node into bag
-func (c *MergeClassificator) put(n int, bestBagIndex int, maxRate float64) {
-	// try to put into existing bag
-	if bestBagIndex > -1 && maxRate > 0 {
-		var maxResult Bag
-		var newArena *classify.Arena
-		var content []int
-
-		if c.bags.List[bestBagIndex].Arena == nil {
-			fmt.Println("Merge nodes:", n, "<=>", bestBagIndex)
-			newArena = classify.Merge(c.Arena, c.Arena, bestBagIndex, n)
-			content = []int{n, bestBagIndex}
-		} else {
-			fmt.Println("Merge bag:", bestBagIndex, "<=>", n)
-			newArena = classify.Merge(c.bags.List[bestBagIndex].Arena, c.Arena, 0, n)
-			content = append(c.bags.List[bestBagIndex].Content, n)
-		}
-
-		if len(newArena.List) > 0 {
-			maxResult = Bag{
-				Arena:   newArena,
-				Content: content,
-			}
-			if maxResult.Efficacy() > c.bags.List[bestBagIndex].Efficacy() {
-				fmt.Println(maxResult.Efficacy())
-				c.bags.List[bestBagIndex] = maxResult
-				c.bags.List[n].Clear()
-			}
-
-			return
-		}
-	}
-	c.bags.List[n].Clear()
-}
-*/
-
-func (a *MergeClassificator) bagNested(nestedBag, inBag classify.Bag) bool {
+func (a *MergeClassificator) bagNested(nestedBag, inBag Bag) bool {
 	cnt := 0
 
 	if len(nestedBag.Content) != len(inBag.Content) {
@@ -211,7 +122,8 @@ func (a *MergeClassificator) bagNested(nestedBag, inBag classify.Bag) bool {
 	return false
 }
 
-func (a *MergeClassificator) nodeNested(nestedNode int, inBag classify.Bag) bool {
+
+func (a *MergeClassificator) nodeNested(nestedNode int, inBag Bag) bool {
 	for _, bn := range inBag.Content {
 		if a.pathNested(nestedNode, bn) {
 			return true
@@ -220,6 +132,7 @@ func (a *MergeClassificator) nodeNested(nestedNode int, inBag classify.Bag) bool
 
 	return false
 }
+
 
 func (a *MergeClassificator) pathNested(inNode, nestedNode int) bool {
 	path := a.PathArray(inNode)
@@ -231,9 +144,29 @@ func (a *MergeClassificator) pathNested(inNode, nestedNode int) bool {
 	return false
 }
 
+func (c *MergeClassificator) filterNested() {
+	for i1, b1 := range c.bags.List {
+		for i2, b2 := range c.bags.List {
+			if i1 != i2 {
+				if c.bagNested(b1, b2) {
+					c.bags.List[i1].Clear()
+				}
+			}
+		}
+	}
+}
+
+*/
 func (c *MergeClassificator) Run() {
 	for n1, _ := range c.List {
 		bestBagIndex, maxRate := c.findBestFit(n1, n1+1)
+
+		if n1 == 134 {
+			fmt.Println("<<<", bestBagIndex, "Rate:", maxRate)
+			spsd := c.cmp(n1, 400)
+			fmt.Println("Supposed rate", spsd)
+		}
+
 		for bestBagIndex > -1 && maxRate > 0 {
 			if !c.merge(n1, bestBagIndex) {
 				break
@@ -246,6 +179,7 @@ func (c *MergeClassificator) Run() {
 		}
 	}
 
+	//c.filterNested()
 	sort.Sort(c.bags)
 }
 
@@ -263,20 +197,12 @@ func (c *MergeClassificator) findBestFit(n1 int, offset int) (bestBagIndex int, 
 	return
 }
 
-/*
-func (c *MergeClassificator) Run() {
-	for n, _ := range c.List {
-		if len(c.bags.List[n].Content) > 0 {
-			c.Classify(n)
+func (c *MergeClassificator) BagsContaining(indexes []int) []Bag {
+	res := make([]Bag, 0)
+	for _, b := range c.bags.List {
+		if b.Contains(indexes) {
+			res = append(res, b)
 		}
 	}
-
-	for i := len(c.List); i < c.bags.Len(); i++ {
-		if len(c.bags.List[n].Content) > 0 {
-			c.Classify(n)
-		}
-	}
-
-	sort.Sort(c.bags)
+	return res
 }
-*/

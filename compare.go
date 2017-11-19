@@ -1,9 +1,11 @@
 // classify project classify.go
 package classify
 
-//	"fmt"
+import (
+	"strings"
 
-//	"golang.org/x/net/html"
+	"golang.org/x/net/html"
+)
 
 func bestOfRoundMatrix(matrix [][]int, checked []bool) (max_i int, max_j int, max_val int) {
 	max_i = -1
@@ -145,6 +147,98 @@ func CmpChildren(a1 *Arena, a2 *Arena, n1 Node, n2 Node) (r *CmpResult) {
 
 	if lj > 0 {
 		r.Count = lj
+	}
+
+	return r
+}
+
+func CmpShallow(n1, n2 Node) *CmpResult {
+	if n1.Type == n2.Type {
+		if (n1.Type == html.TextNode) || (n1.Type == html.CommentNode) {
+			r := CmpText(n1, n2)
+			return &r
+		}
+
+		if n1.Data == n2.Data {
+			r := &CmpResult{nodePoints, nodePoints}
+			//return tagEqualityRate + (CmpAttr(n1.Attr, n2.Attr) * (1 - tagEqualityRate))
+			attrResult := CmpAttr(n1.Attr, n2.Attr)
+			if attrResult != nil {
+				r.Append(*attrResult)
+			}
+			return r
+		}
+	}
+	return nil
+}
+
+func CmpText(t1, t2 Node) CmpResult {
+	if t1.Data == t2.Data {
+		return CmpResult{nodePoints + textPoints, nodePoints + textPoints}
+	}
+	return CmpResult{nodePoints, nodePoints + textPoints}
+}
+
+func CmpAttr(attr1, attr2 []html.Attribute) *CmpResult {
+	if len(attr1) == 0 && len(attr2) == 0 {
+		return nil
+	}
+
+	r := &CmpResult{0, 0}
+
+	if len(attr1) > 0 && len(attr2) > 0 {
+		//var r, r1, r2 int
+		for _, a1 := range attr1 {
+			for _, a2 := range attr2 {
+				if a1.Key == a2.Key && a1.Key != "class" && a2.Key != "class" {
+					r.Sum += attrKeyPoints
+					valueRate := CmpStrings(a1.Val, a2.Val)
+					valueRate.Count *= attrValPoints
+					valueRate.Sum *= attrValPoints
+					r.Append(valueRate)
+				}
+			}
+		}
+
+		classes1 := []string{}
+		classes2 := []string{}
+		for _, a1 := range attr1 {
+			if a1.Key == "class" {
+				classes1 = strings.Fields(a1.Val)
+				r.Count += len(classes1) * classPoints
+			} else {
+				r.Count += attrKeyPoints + attrValPoints*len(a1.Val)
+			}
+		}
+		for _, a2 := range attr2 {
+			if a2.Key == "class" {
+				classes2 = strings.Fields(a2.Val)
+				r.Count += len(classes2) * classPoints
+			} else {
+				r.Count += attrKeyPoints + attrValPoints*len(a2.Val)
+			}
+		}
+
+		for _, c1 := range classes1 {
+			for _, c2 := range classes2 {
+				if c1 == c2 {
+					r.Sum += classPoints
+				}
+			}
+		}
+
+		//double?
+		r.Sum *= 2
+
+		return r
+	}
+
+	if len(attr1) > 0 {
+		r.Count = len(attr1)
+	}
+
+	if len(attr2) > 0 {
+		r.Count = len(attr2)
 	}
 
 	return r

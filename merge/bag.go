@@ -26,6 +26,24 @@ func (b *Bag) Efficacy() int {
 	return 0
 }
 
+func (b *Bag) Contains(indexes []int) bool {
+	for _, index := range indexes {
+		if !b.ContainsIndex(index) {
+			return false
+		}
+	}
+	return true
+}
+
+func (b *Bag) ContainsIndex(index int) bool {
+	for _, n := range b.Content {
+		if n == index {
+			return true
+		}
+	}
+	return false
+}
+
 type Bags struct {
 	List []Bag
 }
@@ -35,7 +53,8 @@ func (b Bags) Len() int {
 }
 
 func (b Bags) Less(i, j int) bool {
-	return b.List[i].Efficacy() > b.List[j].Efficacy()
+	return len(b.List[i].Content) > len(b.List[j].Content)
+	//return b.List[i].Efficacy() > b.List[j].Efficacy()
 }
 
 func (b Bags) Swap(i, j int) {

@@ -29,7 +29,7 @@ func TestNode(t *testing.T) {
 	</html>
 	`))
 	a := NewArena(*n)
-	node := a.FindNodeIdByAttr("id", "specific")
+	node := a.IndexesByAttr("id", "specific")
 	arr := a.PathArray(node[0])
 	if a.Get(arr[0]).Data != "p" {
 		t.Error("Wrong item in path array")
@@ -42,5 +42,26 @@ func TestNode(t *testing.T) {
 	}
 	if a.Get(arr[3]).Data != "html" {
 		t.Error("Wrong item in path array")
+	}
+}
+
+func TestAddClass(t *testing.T) {
+	r := Node{
+		Type: html.ElementNode,
+		Attr: make([]html.Attribute, 0),
+	}
+
+	r.AddClass("one")
+	r.AddClass("two")
+	r.AddClass("three")
+
+	if !r.HasClass("one") {
+		t.Error("Class not added!")
+	}
+	if !r.HasClass("two") {
+		t.Error("Class not added!")
+	}
+	if !r.HasClass("three") {
+		t.Error("Class not added!")
 	}
 }

@@ -16,7 +16,27 @@ func (a *Arena) Get(id int) Node {
 	return a.List[id]
 }
 
-func (a *Arena) FindByAttr(k string, v string) []Node {
+func (a *Arena) NodesByClass(className string) []Node {
+	res := []Node{}
+	for _, n := range a.List {
+		if n.HasClass(className) {
+			res = append(res, n)
+		}
+	}
+	return res
+}
+
+func (a *Arena) IndexesByClass(className string) []int {
+	res := []int{}
+	for i, n := range a.List {
+		if n.HasClass(className) {
+			res = append(res, i)
+		}
+	}
+	return res
+}
+
+func (a *Arena) NodesByAttr(k, v string) []Node {
 	res := []Node{}
 	for _, n := range a.List {
 		for _, attr := range n.Attr {
@@ -28,7 +48,7 @@ func (a *Arena) FindByAttr(k string, v string) []Node {
 	return res
 }
 
-func (a *Arena) FindNodeIdByAttr(k string, v string) []int {
+func (a *Arena) IndexesByAttr(k string, v string) []int {
 	res := []int{}
 	for id, n := range a.List {
 		for _, attr := range n.Attr {
@@ -173,4 +193,82 @@ func (a *Arena) CmpColumn(n1 int, n2 int) *CmpResult {
 
 	total.Append(*next_rate)
 	return &total
+}
+
+func (a *Arena) Path(n int) string {
+	parent := a.Get(n).Parent
+	if parent > 0 {
+		return a.Path(parent) + a.Get(n).String()
+	}
+	return a.Get(n).String()
+}
+
+func (a *Arena) PathArray(n int) []int {
+	init := make([]int, 0)
+	return a.pathArray(init, n)
+}
+
+// iterate all nodes up to root
+func (a *Arena) pathArray(init []int, n int) []int {
+	parent := a.Get(n).Parent
+	if parent > 0 {
+		return a.pathArray(append(init, n), parent)
+	}
+	return append(init, n)
+}
+
+func (a *Arena) Stringify(nodeId int) string {
+	n := a.Get(nodeId)
+	res := n.String() + "\n"
+	for _, c := range n.Children {
+		res += "  " + a.Stringify(c)
+	}
+	return res
+}
+
+func (a *Arena) StringifyInformation(nodeId int) string {
+	n := a.Get(nodeId)
+	var res string
+	if n.Type == html.TextNode {
+		res = n.Data + "\n"
+	}
+
+	if n.Type == html.ElementNode && n.Data == "img" {
+		res = n.GetAttr("src") + "\n"
+	}
+
+	for _, c := range n.Children {
+		res += "  " + a.StringifyInformation(c)
+	}
+	return res
+}
+
+func (a *Arena) Rate(nodeId int) int {
+	r := nodePoints
+	n := a.Get(nodeId)
+	for _, attr := range n.Attr {
+		// doubled for compatibility
+		//r += (attrKeyPoints + len(attr.Val)*attrValPoints) * 2
+		r += attrKeyPoints + len(attr.Val)*attrValPoints
+	}
+
+	for _, c := range n.Children {
+		r += a.Rate(c)
+	}
+	return r
+}
+
+// Function returns list of "informative" endings
+func (a *Arena) GetInformative(nId int) []int {
+	var r []int
+	if a.List[nId].isInformative() {
+		r = append(r, nId)
+		return r
+	}
+
+	for _, id := range a.List[nId].Children {
+		r = append(r, a.GetInformative(id)...)
+	}
+
+	return r
 }

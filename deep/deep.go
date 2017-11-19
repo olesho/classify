@@ -133,3 +133,9 @@ func (c *DeepClassificator) Run() {
 	c.filterNested()
 	sort.Sort(c.bags)
 }
+
+func (c *DeepClassificator) BagsContaining(indexes []int) []Bag {
+	for _, b := range c.bags.List {
+
+	}
+}

@@ -41,9 +41,11 @@ func makePairs(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (r *C
 		if n1.Data == n2.Data {
 			r = &CmpResult{nodePoints, nodePoints}
 			//twin := NewFamily(&HtmlNode{Type: n1.Type, Data: n1.Data, Attr: make([]html.Attribute, 0)})
+
+			// compare attributes (except classes)
 			for _, a1 := range n1.Attr {
 				for _, a2 := range n2.Attr {
-					if a1.Key == a2.Key {
+					if a1.Key == a2.Key && a1.Key != "class" && a2.Key != "class" {
 						r.Sum += attrKeyPoints
 						r.Count += attrKeyPoints
 						attr := html.Attribute{Key: a1.Key}
@@ -53,6 +55,17 @@ func makePairs(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (r *C
 							r.Count += len(a2.Val)
 						}
 						//						twin.Attr = append(twin.Attr, attr)
+					}
+				}
+			}
+
+			//compare classes
+			classes1 := n1.Classes()
+			classes2 := n2.Classes()
+			for _, c1 := range classes1 {
+				for _, c2 := range classes2 {
+					if c1 == c2 {
+						r.Sum += classPoints
 					}
 				}
 			}
@@ -115,8 +128,10 @@ func MergeShallow(n1 Node, n2 Node) *Node {
 				}
 			}
 
-			for _, c1 := range n1.Classes() {
-				for _, c2 := range n2.Classes() {
+			classes1 := n1.Classes()
+			classes2 := n2.Classes()
+			for _, c1 := range classes1 {
+				for _, c2 := range classes2 {
 					if c1 == c2 {
 						r.AddClass(c1)
 					}
