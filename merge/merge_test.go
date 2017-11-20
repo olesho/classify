@@ -27,7 +27,7 @@ func TestBBC(t *testing.T) {
 	c := NewMergeClassificator(a)
 	c.Run()
 
-	t.Log(c.Arena.Get(210))
+	t.Log(c.Arena.Stringify(65))
 
 	nodes := c.Arena.IndexesByClass("collectionHeader-navItem")
 	bags := c.BagsContaining(nodes)

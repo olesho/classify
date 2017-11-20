@@ -2,7 +2,7 @@
 package merge
 
 import (
-	"fmt"
+	//	"fmt"
 	"sort"
 
 	"github.com/olesho/classify"
@@ -31,7 +31,7 @@ func (c *MergeClassificator) Bags() Bags {
 	return c.bags
 }
 
-func (c *MergeClassificator) cmp(n1, n2 int) float64 {
+func (c *MergeClassificator) cmp(n1, n2 int) int {
 	bag1 := c.bags.List[n1]
 	bag2 := c.bags.List[n2]
 
@@ -58,7 +58,8 @@ func (c *MergeClassificator) cmp(n1, n2 int) float64 {
 
 	r := classify.CmpDeepRate(arena1, arena2, index1, index2)
 	if r != nil {
-		return r.Rate()
+		return r.Sum
+		//return r.Rate()
 	}
 	return 0
 
@@ -155,17 +156,11 @@ func (c *MergeClassificator) filterNested() {
 		}
 	}
 }
-
 */
+
 func (c *MergeClassificator) Run() {
 	for n1, _ := range c.List {
 		bestBagIndex, maxRate := c.findBestFit(n1, n1+1)
-
-		if n1 == 134 {
-			fmt.Println("<<<", bestBagIndex, "Rate:", maxRate)
-			spsd := c.cmp(n1, 400)
-			fmt.Println("Supposed rate", spsd)
-		}
 
 		for bestBagIndex > -1 && maxRate > 0 {
 			if !c.merge(n1, bestBagIndex) {
@@ -183,7 +178,7 @@ func (c *MergeClassificator) Run() {
 	sort.Sort(c.bags)
 }
 
-func (c *MergeClassificator) findBestFit(n1 int, offset int) (bestBagIndex int, maxRate float64) {
+func (c *MergeClassificator) findBestFit(n1 int, offset int) (bestBagIndex int, maxRate int) {
 	bestBagIndex = -1
 	for n2 := offset; n2 < len(c.List); n2++ {
 		if n2 != n1 {
