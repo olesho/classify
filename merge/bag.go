@@ -21,7 +21,7 @@ func (b *Bag) Efficacy() int {
 		return 0
 	}
 	if len(b.Arena.List) > 1 {
-		return b.Arena.Rate(1) * len(b.Content)
+		return b.Arena.Rate(0) * len(b.Content)
 	}
 	return 0
 }
@@ -53,8 +53,8 @@ func (b Bags) Len() int {
 }
 
 func (b Bags) Less(i, j int) bool {
-	return len(b.List[i].Content) > len(b.List[j].Content)
-	//return b.List[i].Efficacy() > b.List[j].Efficacy()
+	//return len(b.List[i].Content) > len(b.List[j].Content)
+	return b.List[i].Efficacy() > b.List[j].Efficacy()
 }
 
 func (b Bags) Swap(i, j int) {

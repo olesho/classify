@@ -2,15 +2,48 @@
 package merge
 
 import (
-	//	"fmt"
+	//"fmt"
 	"sort"
 
 	"github.com/olesho/classify"
 )
 
+type RoundMatrix [][]interface{}
+
+func NewRoundMatrix(n int) RoundMatrix {
+	m := make([][]interface{}, n)
+	for i := 0; i < n; i++ {
+		m[i] = make([]interface{}, n-i-1)
+	}
+	return m
+}
+
+func (rm RoundMatrix) Get(x, y int) interface{} {
+	if x == y {
+		panic("Round Matrix Comparison: X cannot equal Y")
+	}
+	if x < y {
+		return [][]interface{}(rm)[x][y-x-1]
+	}
+	return [][]interface{}(rm)[y][x-y-1]
+}
+
+func (rm RoundMatrix) Set(x, y int, val interface{}) {
+	if x == y {
+		panic("Round Matrix Comparison: X cannot equal Y")
+	}
+	if x < y {
+		[][]interface{}(rm)[x][y-x-1] = val
+		return
+	}
+	[][]interface{}(rm)[y][x-y-1] = val
+	return
+}
+
 type MergeClassificator struct {
 	*classify.Arena
-	bags Bags
+	bags   Bags
+	matrix RoundMatrix
 }
 
 func NewMergeClassificator(a *classify.Arena) MergeClassificator {
@@ -96,96 +129,70 @@ func (c *MergeClassificator) merge(n1, n2 int) bool {
 			c.bags.List[n1] = newBag
 			c.bags.List[n2].Clear()
 
-			return true
-		}
-	}
-
-	return false
-}
-
-/*
-func (a *MergeClassificator) bagNested(nestedBag, inBag Bag) bool {
-	cnt := 0
-
-	if len(nestedBag.Content) != len(inBag.Content) {
-		return false
-	}
-
-	for _, nNested := range nestedBag.Content {
-		if !a.nodeNested(nNested, inBag) {
-			return false
-		}
-		cnt++
-	}
-	if cnt == len(nestedBag.Content) && nestedBag.Rate < inBag.Rate {
-		return true
-	}
-	return false
-}
-
-
-func (a *MergeClassificator) nodeNested(nestedNode int, inBag Bag) bool {
-	for _, bn := range inBag.Content {
-		if a.pathNested(nestedNode, bn) {
-			return true
-		}
-	}
-
-	return false
-}
-
-
-func (a *MergeClassificator) pathNested(inNode, nestedNode int) bool {
-	path := a.PathArray(inNode)
-	for _, item := range path {
-		if item == nestedNode {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *MergeClassificator) filterNested() {
-	for i1, b1 := range c.bags.List {
-		for i2, b2 := range c.bags.List {
-			if i1 != i2 {
-				if c.bagNested(b1, b2) {
-					c.bags.List[i1].Clear()
+			for n, _ := range c.List {
+				if n != n2 {
+					c.matrix.Set(n, n2, int(0))
 				}
 			}
+
+			c.findAll(n1)
+
+			return true
 		}
 	}
+
+	c.matrix.Set(n1, n2, int(0))
+
+	return false
 }
-*/
 
 func (c *MergeClassificator) Run() {
+	c.matrix = NewRoundMatrix(len(c.List))
+
 	for n1, _ := range c.List {
-		bestBagIndex, maxRate := c.findBestFit(n1, n1+1)
-
-		for bestBagIndex > -1 && maxRate > 0 {
-			if !c.merge(n1, bestBagIndex) {
-				break
-			}
-			bestBagIndex, maxRate = c.findBestFit(n1, n1+1)
-		}
-
-		if len(c.bags.List[n1].Content) < 2 {
-			c.bags.List[n1].Clear()
-		}
+		c.findRow(n1, n1+1)
 	}
 
-	//c.filterNested()
+	x, y, v := c.findBest()
+	for v > 0 {
+		c.merge(x, y)
+		x, y, v = c.findBest()
+	}
+
+	c.filterNested()
+
 	sort.Sort(c.bags)
+
 }
 
-func (c *MergeClassificator) findBestFit(n1 int, offset int) (bestBagIndex int, maxRate int) {
-	bestBagIndex = -1
+func (c *MergeClassificator) findRow(n1 int, offset int) {
 	for n2 := offset; n2 < len(c.List); n2++ {
 		if n2 != n1 {
 			nextRate := c.cmp(n1, n2)
-			if nextRate > maxRate {
-				maxRate = nextRate
-				bestBagIndex = n2
+			c.matrix.Set(n1, n2, nextRate)
+		}
+	}
+	return
+}
+
+func (c *MergeClassificator) findAll(n1 int) {
+	for n2, _ := range c.List {
+		if n2 != n1 {
+			nextRate := c.cmp(n1, n2)
+			c.matrix.Set(n1, n2, nextRate)
+		}
+	}
+	return
+}
+
+func (c *MergeClassificator) findBest() (best_x, best_y, val int) {
+	for x, row := range [][]interface{}(c.matrix) {
+		for y, v := range row {
+			v := v.(int)
+			if v > val {
+				best_x = x
+				best_y = y + x + 1
+				val = v
 			}
 		}
 	}

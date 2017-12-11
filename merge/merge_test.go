@@ -9,6 +9,53 @@ import (
 	"golang.org/x/net/html"
 )
 
+func TestRun(t *testing.T) {
+	//f, err := os.Open("../examples/BBC - Homepage.html")
+	//f, err := os.Open("../examples/Hacker News.html")
+	f, err := os.Open("../examples/Hacker Noon.html")
+	if err != nil {
+		t.Error(err)
+	}
+	defer f.Close()
+
+	n, err := html.Parse(f)
+	if err != nil {
+		t.Error(err)
+	}
+	a := classify.NewArena(*n)
+
+	c := NewMergeClassificator(a)
+	c.Run()
+
+	nodes := c.Arena.IndexesByClass("collectionHeader-navItem")
+	bags := c.BagsContaining(nodes)
+	if len(bags) < 1 {
+		t.Error("Predicted bag #1 not found!")
+		return
+	}
+
+	if len(bags[0].Content) != 4 {
+		t.Error("Bag #1 size not equal to predicted")
+		return
+	}
+
+	for bIndex, bag := range c.bags.List {
+		t.Log("Bag:", bIndex, "Bag size:", len(bag.Content), "Bag rate:", bag.Efficacy())
+		//t.Log(bag.Content)
+		for _, i := range bag.Content {
+			//t.Log(c.Get(i).String())
+			t.Log("Item:", i)
+			t.Log(c.Arena.Get(i).String())
+		}
+		t.Log("=================================================================================================")
+		if bIndex == 10 {
+			break
+		}
+	}
+
+}
+
+/*
 func TestBBC(t *testing.T) {
 	//f, err := os.Open("../examples/BBC - Homepage.html")
 	//f, err := os.Open("../examples/Hacker News.html")
@@ -69,5 +116,5 @@ func TestBBC(t *testing.T) {
 				break
 			}
 		}
-	*/
-}
+*/
+//}
