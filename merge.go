@@ -2,7 +2,7 @@
 package classify
 
 import (
-	"fmt"
+	//	"fmt"
 
 	"golang.org/x/net/html"
 )
@@ -22,11 +22,17 @@ func Merge(a1, a2 *Arena, id1, id2 int) *Arena {
 
 func buildRoot(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord, dest *Arena) {
 	resNode := MergeShallow(a1.Get(id1), a2.Get(id2))
+
 	if resNode != nil {
 		dest.List = append(dest.List, *resNode)
-		resId := len(dest.List) - 1
-		//dest.AddChild(destId, resId)
 
+		/* save informatives
+		if a2.Get(id2).isInformative() {
+
+		}
+		*/
+
+		resId := len(dest.List) - 1
 		for _, coord := range pairs[id1][id2] {
 			build(a1, a2, a1.Get(id1).Children[coord.i], a2.Get(id2).Children[coord.j], pairs, dest, resId)
 		}
@@ -39,6 +45,12 @@ func build(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord, dest *Are
 		dest.List = append(dest.List, *resNode)
 		resId := len(dest.List) - 1
 		dest.AddChild(destId, resId)
+
+		/* save informatives
+		if a2.Get(id2).isInformative() {
+
+		}
+		*/
 
 		for _, coord := range pairs[id1][id2] {
 			build(a1, a2, a1.Get(id1).Children[coord.i], a2.Get(id2).Children[coord.j], pairs, dest, resId)
@@ -120,6 +132,7 @@ func makePairs(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (r *C
 	return nil
 }
 
+/*
 func MakePairsMock(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (r *CmpResult) {
 	fmt.Println("Mock")
 	n1 := a1.List[id1]
@@ -197,6 +210,7 @@ func MakePairsMock(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (
 	}
 	return nil
 }
+*/
 
 func MergeShallow(n1 Node, n2 Node) *Node {
 	if n1.Type == n2.Type {
@@ -230,6 +244,11 @@ func MergeShallow(n1 Node, n2 Node) *Node {
 			}
 
 		}
+
+		if n1.DataArray != nil && n2.DataArray != nil {
+			r.DataArray = append(n1.DataArray, n2.DataArray...)
+		}
+
 		return &r
 	}
 	return nil

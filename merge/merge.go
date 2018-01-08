@@ -154,15 +154,14 @@ func (c *MergeClassificator) Run() {
 	}
 
 	x, y, v := c.findBest()
-	for v > 0 {
+	for v > 200 {
 		c.merge(x, y)
 		x, y, v = c.findBest()
+		//fmt.Println(x, y, v)
 	}
 
 	c.filterNested()
-
 	sort.Sort(c.bags)
-
 }
 
 func (c *MergeClassificator) findRow(n1 int, offset int) {
@@ -207,4 +206,55 @@ func (c *MergeClassificator) BagsContaining(indexes []int) []Bag {
 		}
 	}
 	return res
+}
+
+func (a *MergeClassificator) bagNested(nestedBag, inBag Bag) bool {
+	cnt := 0
+
+	if len(nestedBag.Content) != len(inBag.Content) {
+		return false
+	}
+
+	for _, nNested := range nestedBag.Content {
+		if !a.nodeNested(nNested, inBag) {
+			return false
+		}
+		cnt++
+	}
+	if cnt == len(nestedBag.Content) && nestedBag.Rate < inBag.Rate {
+		return true
+	}
+	return false
+}
+
+func (a *MergeClassificator) nodeNested(nestedNode int, inBag Bag) bool {
+	for _, bn := range inBag.Content {
+		if a.pathNested(nestedNode, bn) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *MergeClassificator) pathNested(inNode, nestedNode int) bool {
+	path := a.PathArray(inNode)
+	for _, item := range path {
+		if item == nestedNode {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *MergeClassificator) filterNested() {
+	for i1, b1 := range c.bags.List {
+		for i2, b2 := range c.bags.List {
+			if i1 != i2 {
+				if c.bagNested(b1, b2) {
+					c.bags.List[i1].Clear()
+				}
+			}
+		}
+	}
 }

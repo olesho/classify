@@ -1,0 +1,9 @@
+- use event bus
+- build hyperlinks graph
+- recognize field types:
+  - name
+  - email
+  - date
+  - time
+  - address
+  - price

@@ -2,6 +2,7 @@
 package deep
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/olesho/classify"
@@ -28,6 +29,33 @@ func (c *DeepClassificator) Bags() classify.Bags {
 }
 
 func (c *DeepClassificator) Classify(n int) {
+	currentBag := c.bags.List[n]
+	//if len(currentBag.Content) > 0 {
+
+	var maxRate float64 = 0
+	var bestBagIndex = -1
+	var maxResult *classify.CmpResult
+	for i, bag := range c.bags.List {
+		if len(bag.Content) > 0 {
+			if bag.Content[0] != n {
+				r := classify.CmpDeepRate(&c.Arena, &c.Arena, bag.Content[0], currentBag.Content[0])
+				if r != nil {
+					val := r.Rate()
+					if val > maxRate {
+						maxRate = val
+						bestBagIndex = i
+						maxResult = r
+					}
+				}
+			}
+		}
+	}
+	c.put(n, bestBagIndex, maxRate, maxResult)
+	//}
+}
+
+/*
+func (c *DeepClassificator) Classify(n int) {
 	var maxRate float64 = 0
 	var bestBagIndex = -1
 	var maxResult *classify.CmpResult
@@ -48,6 +76,7 @@ func (c *DeepClassificator) Classify(n int) {
 	}
 	c.put(n, bestBagIndex, maxRate, maxResult)
 }
+*/
 
 // puts new comparation result for a node into bag
 func (c *DeepClassificator) put(n int, bestBagIndex int, maxRate float64, maxResult *classify.CmpResult) {
@@ -125,17 +154,36 @@ func (a *DeepClassificator) pathNested(inNode, nestedNode int) bool {
 }
 
 func (c *DeepClassificator) Run() {
+	fmt.Printf("%+v/n", c.bags.List[5])
+
+	/*
+		n := 0
+		for n < c.bags.Len() {
+			if len(c.bags.List[n].Content) > 0 {
+				c.Classify(n)
+			}
+			n++
+		}
+	*/
+
 	for n, _ := range c.List {
 		if len(c.bags.List[n].Content) > 0 {
 			c.Classify(n)
 		}
 	}
+
+	for n, _ := range c.bags.List {
+		c.bags.List[n].Index = n
+	}
+
 	c.filterNested()
 	sort.Sort(c.bags)
 }
 
+/*
 func (c *DeepClassificator) BagsContaining(indexes []int) []Bag {
 	for _, b := range c.bags.List {
 
 	}
 }
+*/

@@ -21,20 +21,43 @@ type Node struct {
 
 	Children []int
 	Parent   int
+
+	// used for multiple values
+	DataArray []string
 }
 
 func NewNode(n html.Node) *Node {
+	var dataArray []string
+	if (n.Type == html.TextNode) && (strings.TrimSpace(n.Data) != "") {
+		dataArray = []string{n.Data}
+	}
+	if n.Type == html.ElementNode && n.Data == "img" {
+		for _, attr := range n.Attr {
+			if attr.Key == "src" {
+				dataArray = []string{attr.Val}
+			}
+		}
+	}
+	if n.Type == html.ElementNode && n.Data == "a" {
+		for _, attr := range n.Attr {
+			if attr.Key == "href" {
+				dataArray = []string{attr.Val}
+			}
+		}
+	}
 	return &Node{
-		Type: n.Type,
-		Data: n.Data,
-		Attr: n.Attr,
+		Type:      n.Type,
+		Data:      n.Data,
+		Attr:      n.Attr,
+		DataArray: dataArray,
 	}
 }
 
 func (n *Node) isInformative() bool {
 	if strings.ToLower(n.Data) != "script" && strings.ToLower(n.Data) != "noscript" && strings.ToLower(n.Data) != "style" {
 		if n.Type == html.TextNode {
-			if len(strings.Trim(n.Data, "\x0d\x0a\x20\x09")) > 0 {
+			//if len(strings.Trim(n.Data, "\x0d\x0a\x20\x09")) > 0 {
+			if len(strings.TrimSpace(n.Data)) > 0 {
 				return true
 			}
 		} else {

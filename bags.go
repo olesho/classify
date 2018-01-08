@@ -5,6 +5,7 @@ type Bag struct {
 	Content []int
 	Sum     int
 	Rate    float64
+	Index   int
 }
 
 func (b *Bag) Clear() {
