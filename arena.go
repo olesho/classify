@@ -281,6 +281,22 @@ func (a *Arena) GetInformative(nId int) []int {
 	return r
 }
 
+func (a *Arena) WithNonequalFields(nId int) []int {
+	var r []int
+	if a.List[nId].DataArray != nil {
+		if !a.List[nId].DataEqual() {
+			r = append(r, nId)
+			return r
+		}
+	}
+
+	for _, id := range a.List[nId].Children {
+		r = append(r, a.WithNonequalFields(id)...)
+	}
+
+	return r
+}
+
 func (a *Arena) WithFields(nId int) []int {
 	var r []int
 	if a.List[nId].DataArray != nil {

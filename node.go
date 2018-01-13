@@ -71,6 +71,15 @@ func (n *Node) isInformative() bool {
 	return false
 }
 
+func (n *Node) DataEqual() bool {
+	for i := 1; i < len(n.DataArray); i++ {
+		if n.DataArray[i] != n.DataArray[i-1] {
+			return false
+		}
+	}
+	return true
+}
+
 /*
 func (a *Arena) hasAnsector(node int, ansector int) bool {
 	if node == ansector {
