@@ -1,5 +1,5 @@
-// classify project merge.go
-package merge
+// classify project advanced.go
+package advanced
 
 import (
 	//"fmt"
@@ -48,7 +48,7 @@ type Item struct {
 }
 */
 
-type MergeClassificator struct {
+type AdvancedClassificator struct {
 	// arena containing all nodes
 	*classify.Arena
 	// list of all bags (initially equals to number of all nodes)
@@ -59,7 +59,7 @@ type MergeClassificator struct {
 	//sorted []Item
 }
 
-func NewMergeClassificator(a *classify.Arena) MergeClassificator {
+func NewAdvancedClassificator(a *classify.Arena) AdvancedClassificator {
 	bags := make([]Bag, len(a.List))
 	for i, _ := range a.List {
 		bags[i] = Bag{
@@ -67,17 +67,17 @@ func NewMergeClassificator(a *classify.Arena) MergeClassificator {
 			//Arena:   a,
 		}
 	}
-	return MergeClassificator{
+	return AdvancedClassificator{
 		Arena: a,
 		bags:  Bags{bags},
 	}
 }
 
-func (c *MergeClassificator) Bags() Bags {
+func (c *AdvancedClassificator) Bags() Bags {
 	return c.bags
 }
 
-func (c *MergeClassificator) cmp(n1, n2 int) int {
+func (c *AdvancedClassificator) cmp(n1, n2 int) int {
 	bag1 := c.bags.List[n1]
 	bag2 := c.bags.List[n2]
 
@@ -111,7 +111,7 @@ func (c *MergeClassificator) cmp(n1, n2 int) int {
 
 }
 
-func (c *MergeClassificator) merge(n1, n2 int) bool {
+func (c *AdvancedClassificator) merge(n1, n2 int) bool {
 	bag1 := c.bags.List[n1]
 	bag2 := c.bags.List[n2]
 
@@ -170,7 +170,7 @@ func (c *MergeClassificator) merge(n1, n2 int) bool {
 	return false
 }
 
-func (c *MergeClassificator) Run() {
+func (c *AdvancedClassificator) Run() {
 	c.matrix = NewRoundMatrix(len(c.List))
 
 	for n1, _ := range c.List {
@@ -188,7 +188,7 @@ func (c *MergeClassificator) Run() {
 }
 
 // compare all nodes (since offset) to n1 and write results to matrix
-func (c *MergeClassificator) findRow(n1 int, offset int) {
+func (c *AdvancedClassificator) findRow(n1 int, offset int) {
 	for n2 := offset; n2 < len(c.List); n2++ {
 		if n2 != n1 {
 			nextRate := c.cmp(n1, n2)
@@ -199,7 +199,7 @@ func (c *MergeClassificator) findRow(n1 int, offset int) {
 }
 
 // compare all nodes to n1 and write results to matrix
-func (c *MergeClassificator) findAll(n1 int) {
+func (c *AdvancedClassificator) findAll(n1 int) {
 	for n2, _ := range c.List {
 		if n2 != n1 {
 			nextRate := c.cmp(n1, n2)
@@ -209,7 +209,7 @@ func (c *MergeClassificator) findAll(n1 int) {
 	return
 }
 
-func (c *MergeClassificator) findBest() (best_x, best_y, val int) {
+func (c *AdvancedClassificator) findBest() (best_x, best_y, val int) {
 	for x, row := range [][]interface{}(c.matrix) {
 		for y, v := range row {
 			v := v.(int)
@@ -223,7 +223,7 @@ func (c *MergeClassificator) findBest() (best_x, best_y, val int) {
 	return
 }
 
-func (c *MergeClassificator) BagsContaining(indexes []int) []Bag {
+func (c *AdvancedClassificator) BagsContaining(indexes []int) []Bag {
 	res := make([]Bag, 0)
 	for _, b := range c.bags.List {
 		if b.Contains(indexes) {
@@ -233,7 +233,7 @@ func (c *MergeClassificator) BagsContaining(indexes []int) []Bag {
 	return res
 }
 
-func (a *MergeClassificator) bagNested(nestedBag, inBag Bag) bool {
+func (a *AdvancedClassificator) bagNested(nestedBag, inBag Bag) bool {
 	cnt := 0
 
 	if len(nestedBag.Content) != len(inBag.Content) {
@@ -252,7 +252,7 @@ func (a *MergeClassificator) bagNested(nestedBag, inBag Bag) bool {
 	return false
 }
 
-func (a *MergeClassificator) nodeNested(nestedNode int, inBag Bag) bool {
+func (a *AdvancedClassificator) nodeNested(nestedNode int, inBag Bag) bool {
 	for _, bn := range inBag.Content {
 		if a.pathNested(nestedNode, bn) {
 			return true
@@ -262,7 +262,7 @@ func (a *MergeClassificator) nodeNested(nestedNode int, inBag Bag) bool {
 	return false
 }
 
-func (a *MergeClassificator) pathNested(inNode, nestedNode int) bool {
+func (a *AdvancedClassificator) pathNested(inNode, nestedNode int) bool {
 	path := a.PathArray(inNode)
 	for _, item := range path {
 		if item == nestedNode {
@@ -272,7 +272,7 @@ func (a *MergeClassificator) pathNested(inNode, nestedNode int) bool {
 	return false
 }
 
-func (c *MergeClassificator) nested(bag Bag) bool {
+func (c *AdvancedClassificator) nested(bag Bag) bool {
 	for _, inBag := range c.bags.List {
 		if c.bagNested(bag, inBag) {
 			return true
@@ -282,7 +282,7 @@ func (c *MergeClassificator) nested(bag Bag) bool {
 }
 
 /*
-func (c *MergeClassificator) filterNested() {
+func (c *AdvancedClassificator) filterNested() {
 	for i1, b1 := range c.bags.List {
 		for i2, b2 := range c.bags.List {
 			if i1 != i2 {
