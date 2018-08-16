@@ -21,77 +21,51 @@ type Node struct {
 
 	Children []int
 	Parent   int
-
-	// used for multiple values
-	DataArray []string
 }
 
 func NewNode(n html.Node) *Node {
-	var dataArray []string
+	return &Node{
+		Type: n.Type,
+		Data: n.Data,
+		Attr: n.Attr,
+	}
+}
+
+func (n *Node) Clone() *Node {
+	c := &Node{
+		Type:   n.Type,
+		Data:   n.Data,
+		Parent: n.Parent,
+	}
+	c.Attr = make([]html.Attribute, len(n.Attr))
+	copy(c.Attr, n.Attr)
+	c.Children = make([]int, len(n.Children))
+	copy(c.Children, n.Children)
+	//	c.DataArray = make([]string, len(n.DataArray))
+	//	copy(c.DataArray, n.DataArray)
+	return c
+}
+
+func (n *Node) isInformative() bool {
 	if (n.Type == html.TextNode) && (strings.TrimSpace(n.Data) != "") {
-		dataArray = []string{n.Data}
+		return true
 	}
 	if n.Type == html.ElementNode && n.Data == "img" {
 		for _, attr := range n.Attr {
 			if attr.Key == "src" {
-				dataArray = []string{attr.Val}
+				return true
 			}
 		}
 	}
 	if n.Type == html.ElementNode && n.Data == "a" {
 		for _, attr := range n.Attr {
 			if attr.Key == "href" {
-				dataArray = []string{attr.Val}
-			}
-		}
-	}
-	return &Node{
-		Type:      n.Type,
-		Data:      n.Data,
-		Attr:      n.Attr,
-		DataArray: dataArray,
-	}
-}
-
-func (n *Node) isInformative() bool {
-	if strings.ToLower(n.Data) != "script" && strings.ToLower(n.Data) != "noscript" && strings.ToLower(n.Data) != "style" {
-		if n.Type == html.TextNode {
-			//if len(strings.Trim(n.Data, "\x0d\x0a\x20\x09")) > 0 {
-			if len(strings.TrimSpace(n.Data)) > 0 {
 				return true
 			}
-		} else {
-			if n.Type == html.ElementNode {
-				if strings.ToLower(n.Data) == "img" {
-					return true
-				}
-			}
 		}
 	}
 	return false
 }
-
-func (n *Node) DataEqual() bool {
-	for i := 1; i < len(n.DataArray); i++ {
-		if n.DataArray[i] != n.DataArray[i-1] {
-			return false
-		}
-	}
-	return true
-}
-
-/*
-func (a *Arena) hasAnsector(node int, ansector int) bool {
-	if node == ansector {
-		return true
-	} else {
-		if a.list[node].Parent != 0 {
-			return a.hasAnsector(a.list[node].Parent, ansector)
-		}
-	}
-	return false
-}
-*/
 
 func (n *Node) Classes() []string {
 	for _, a := range n.Attr {
@@ -151,4 +125,25 @@ func (n Node) GetAttr(key string) string {
 		}
 	}
 	return ""
+}
+
+func (n Node) Info() (string, bool) {
+	if n.Type == html.TextNode {
+		return strings.TrimSpace(n.Data), true
+	}
+	if n.Type == html.ElementNode && n.Data == "img" {
+		for _, attr := range n.Attr {
+			if attr.Key == "src" {
+				return attr.Val, true
+			}
+		}
+	}
+	if n.Type == html.ElementNode && n.Data == "a" {
+		for _, attr := range n.Attr {
+			if attr.Key == "href" {
+				return attr.Val, true
+			}
+		}
+	}
+	return "", false
 }

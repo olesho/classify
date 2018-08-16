@@ -245,9 +245,11 @@ func MergeShallow(n1 Node, n2 Node) *Node {
 
 		}
 
-		if n1.DataArray != nil && n2.DataArray != nil {
-			r.DataArray = append(n1.DataArray, n2.DataArray...)
-		}
+		/*
+			if n1.DataArray != nil && n2.DataArray != nil {
+				r.DataArray = append(n1.DataArray, n2.DataArray...)
+			}
+		*/
 
 		return &r
 	}
