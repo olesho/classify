@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/olesho/classify"
-	"github.com/olesho/go-words"
+	"github.com/olesho/classify/go-words"
 	"golang.org/x/net/html"
 )
 

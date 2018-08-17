@@ -3,9 +3,9 @@ package main
 import (
 	"golang.org/x/net/html"
 	"github.com/olesho/classify"
-	htmlwords "github.com/olesho/go-words/html"
+	htmlwords "github.com/olesho/classify/go-words/html"
 	"net/http"
-	"github.com/olesho/go-words"
+	"github.com/olesho/classify/go-words"
 	"net/url"
 	"encoding/json"
 	"strconv"
