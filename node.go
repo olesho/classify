@@ -21,13 +21,15 @@ type Node struct {
 
 	Children []int
 	Parent   int
+	Id int
 }
 
-func NewNode(n html.Node) *Node {
+func NewNode(n html.Node, id int) *Node {
 	return &Node{
 		Type: n.Type,
 		Data: n.Data,
 		Attr: n.Attr,
+		Id: id,
 	}
 }
 

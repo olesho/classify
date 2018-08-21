@@ -88,6 +88,16 @@ func NewArenaRoot() *Arena {
 	}
 }
 
+func (a *Arena) HasDescendant(id, desc int) bool {
+	n := a.Get(id)
+	for _, childId := range n.Children {
+		if childId == desc || a.HasDescendant(childId, desc) {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *Arena) HasParent(child, parent int) bool {
 	n := a.Get(child)
 	for n.Parent != 0 {
@@ -108,7 +118,7 @@ func (a *Arena) transform(node_index int, n html.Node) {
 		return
 	}
 
-	a.List = append(a.List, *NewNode(n))
+	a.List = append(a.List, *NewNode(n, len(a.List)))
 	currentId := len(a.List) - 1
 
 	if currentId != node_index {

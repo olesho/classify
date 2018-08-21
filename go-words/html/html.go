@@ -58,7 +58,6 @@ func (w Word) toNodes() []Node {
 	return res
 }
 
-
 func FindValues(word, text Word) [][]string {
 	positions := words.FindPositions(words.Word(word), words.Word(text))
 	fieldsTable := make([][]string, len(positions))
