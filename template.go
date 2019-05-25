@@ -8,7 +8,7 @@ import (
 type Template struct {
 	Chains []Chain
 }
-type Chain []Node
+type Chain []*Node
 
 func max(m [][]float64, off_i, off_j []bool) (i, j int) {
 	max := float64(0)
@@ -83,11 +83,11 @@ func (a *Arena) Infomative(nId int) []int {
 }
 
 func (a *Arena) Chain(nId, stopper int) Chain {
-	c := make([]Node, 0)
+	c := make([]*Node, 0)
 	return a.chain(c, nId, stopper)
 }
 
-func (a *Arena) chain(ch []Node, nId, stopper int) []Node {
+func (a *Arena) chain(ch []*Node, nId, stopper int) []*Node {
 	n := a.Get(nId)
 	if n.Parent > 0 && n.Parent != stopper {
 		return a.chain(append(ch, n), n.Parent, stopper)
@@ -122,13 +122,13 @@ func mergeChains(c1, c2 Chain) Chain {
 		min_len = len(c2)
 	}
 
-	res := make([]Node, 0)
+	res := make([]*Node, 0)
 	for i := 0; i < min_len; i++ {
 		next := MergeShallow(c1[i], c2[i])
 		if next.Data == "" && next.Type == html.ElementNode {
 			break
 		}
-		res = append(res, *next)
+		res = append(res, next)
 	}
 
 	return res

@@ -11,7 +11,7 @@ func (a *Arena) Clone(srcId int) (dest *Arena) {
 	dest = NewArenaRoot()
 	lastId := a.lastNode(srcId) + 1
 
-	dest.List = make([]Node, lastId-srcId)
+	dest.List = make([]*Node, lastId-srcId)
 	src := a.List[srcId:lastId]
 	for i, _ := range src {
 		c := src[i].Clone()
@@ -19,7 +19,7 @@ func (a *Arena) Clone(srcId int) (dest *Arena) {
 			c.Children[j] = c.Children[j] - srcId
 		}
 		c.Parent = c.Parent - srcId
-		dest.List[i] = *c
+		dest.List[i] = c
 
 	}
 	return dest

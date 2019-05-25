@@ -8,15 +8,15 @@ import (
 )
 
 type Arena struct {
-	List []Node
+	List []*Node
 }
 
-func (a *Arena) Get(id int) Node {
+func (a *Arena) Get(id int) *Node {
 	return a.List[id]
 }
 
-func (a *Arena) NodesByClass(className string) []Node {
-	res := []Node{}
+func (a *Arena) NodesByClass(className string) []*Node {
+	res := []*Node{}
 	for _, n := range a.List {
 		if n.HasClass(className) {
 			res = append(res, n)
@@ -35,8 +35,8 @@ func (a *Arena) IndexesByClass(className string) []int {
 	return res
 }
 
-func (a *Arena) NodesByAttr(k, v string) []Node {
-	res := []Node{}
+func (a *Arena) NodesByAttr(k, v string) []*Node {
+	res := []*Node{}
 	for _, n := range a.List {
 		for _, attr := range n.Attr {
 			if attr.Key == k && attr.Val == v {
@@ -84,7 +84,7 @@ func (a *Arena) Append(root html.Node) {
 
 func NewArenaRoot() *Arena {
 	return &Arena{
-		List: make([]Node, 0),
+		List: make([]*Node, 0),
 	}
 }
 
@@ -118,7 +118,7 @@ func (a *Arena) transform(node_index int, n html.Node) {
 		return
 	}
 
-	a.List = append(a.List, *NewNode(n, len(a.List)))
+	a.List = append(a.List, NewNode(n, len(a.List)))
 	currentId := len(a.List) - 1
 
 	if currentId != node_index {

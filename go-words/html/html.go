@@ -7,6 +7,7 @@ import (
 	"github.com/olesho/classify"
 	"github.com/olesho/classify/go-words"
 	"golang.org/x/net/html"
+	"fmt"
 )
 
 type HtmlProcessor struct {
@@ -62,6 +63,7 @@ func FindValues(word, text Word) [][]string {
 	positions := words.FindPositions(words.Word(word), words.Word(text))
 	fieldsTable := make([][]string, len(positions))
 	for i, p := range positions {
+		fmt.Println(text[p])
 		fieldsTable[i] = extractValues(text[p: p+len(word)])
 	}
 	return fieldsTable

@@ -93,7 +93,7 @@ func (r *CmpResult) Rate() float64 {
 	return float64(r.Sum) / float64(r.Count)
 }
 
-func CmpChildren(a1 *Arena, a2 *Arena, n1 Node, n2 Node) (r *CmpResult) {
+func CmpChildren(a1 *Arena, a2 *Arena, n1 *Node, n2 *Node) (r *CmpResult) {
 	li := len(n1.Children)
 	lj := len(n2.Children)
 
@@ -152,7 +152,7 @@ func CmpChildren(a1 *Arena, a2 *Arena, n1 Node, n2 Node) (r *CmpResult) {
 	return r
 }
 
-func CmpShallow(n1, n2 Node) *CmpResult {
+func CmpShallow(n1, n2 *Node) *CmpResult {
 	if n1.Type == n2.Type {
 		if (n1.Type == html.TextNode) || (n1.Type == html.CommentNode) {
 			r := CmpText(n1, n2)
@@ -172,7 +172,7 @@ func CmpShallow(n1, n2 Node) *CmpResult {
 	return nil
 }
 
-func CmpText(t1, t2 Node) CmpResult {
+func CmpText(t1, t2 *Node) CmpResult {
 	if t1.Data == t2.Data {
 		return CmpResult{nodePoints + textPoints, nodePoints + textPoints}
 	}

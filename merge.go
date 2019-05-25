@@ -24,7 +24,7 @@ func buildRoot(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord, dest 
 	resNode := MergeShallow(a1.Get(id1), a2.Get(id2))
 
 	if resNode != nil {
-		dest.List = append(dest.List, *resNode)
+		dest.List = append(dest.List, resNode)
 
 		/* save informatives
 		if a2.Get(id2).isInformative() {
@@ -42,7 +42,7 @@ func buildRoot(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord, dest 
 func build(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord, dest *Arena, destId int) {
 	resNode := MergeShallow(a1.Get(id1), a2.Get(id2))
 	if resNode != nil {
-		dest.List = append(dest.List, *resNode)
+		dest.List = append(dest.List, resNode)
 		resId := len(dest.List) - 1
 		dest.AddChild(destId, resId)
 
@@ -212,7 +212,7 @@ func MakePairsMock(a1, a2 *Arena, id1, id2 int, pairs map[int]map[int][]Coord) (
 }
 */
 
-func MergeShallow(n1 Node, n2 Node) *Node {
+func MergeShallow(n1 *Node, n2 *Node) *Node {
 	if n1.Type == n2.Type {
 		r := Node{
 			Type: n1.Type,

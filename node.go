@@ -22,6 +22,9 @@ type Node struct {
 	Children []int
 	Parent   int
 	Id int
+
+	// additional
+	Volume int
 }
 
 func NewNode(n html.Node, id int) *Node {
