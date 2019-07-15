@@ -110,22 +110,51 @@ func sum(vals []float64) (r float64) {
 	return
 }
 
+type RateItem struct {
+	Val    float64
+	Index1 int
+	Index2 int
+}
+
 func ChildComparator(a *classify.Arena, n1, n2 *classify.Node) float64 {
 	size1, size2 := len(n1.Children), len(n2.Children)
-	rates1, rates2 := make([]float64, size1), make([]float64, size2)
+	rating := make([]RateItem, size1*size2)
 	for i1, idx1 := range n1.Children {
 		for i2, idx2 := range n2.Children {
-			rate := elementComparator(a, a.Get(idx1), a.Get(idx2))
-			if rate > rates1[i1] {
-				rates1[i1] = rate
-			}
-			if rate > rates2[i2] {
-				rates2[i2] = rate
+			idx := (i1+1)*(i2+1) - 1
+			rating[idx].Val = elementComparator(a, a.Get(idx1), a.Get(idx2))
+			rating[idx].Index1 = i1
+			rating[idx].Index2 = i2
+		}
+	}
+
+	sort.Slice(rating, func(i, j int) bool {
+		return rating[i].Val > rating[j].Val
+	})
+
+	var total float64
+	flags1 := make([]bool, size1)
+	flags2 := make([]bool, size2)
+	count := 0
+	smallerSize := 0
+	if size1 < size2 {
+		smallerSize = size1
+	} else {
+		smallerSize = size2
+	}
+	for _, rate := range rating {
+		if !flags1[rate.Index1] && !flags2[rate.Index2] {
+			total += rate.Val
+			flags1[rate.Index1] = true
+			flags2[rate.Index2] = true
+			count++
+			if count == smallerSize {
+				break
 			}
 		}
 	}
 
-	return (sum(rates1) + sum(rates2)) / float64(size1+size2)
+	return (total * 2) / float64(size1+size2)
 }
 
 const attrKeyPoints = .5
@@ -192,7 +221,7 @@ func cmpStrings(s1 string, s2 string) float64 {
 		return 0
 	}
 
-	var r int
+	var r float64
 	l := len(s2)
 	if len(s1) < len(s2) {
 		l = len(s1)
@@ -200,7 +229,15 @@ func cmpStrings(s1 string, s2 string) float64 {
 
 	for i := 0; i < l; i++ {
 		if s1[i] == s2[i] {
-			r++
+			r += 1.
+		} else if isDigitChar(s1[i]) && isDigitChar(s2[i]) { // both are digits
+			r += 0.8
+		} else if isUpperChar(s1[i]) && isUpperChar(s2[i]) { // both are upper characters
+			r += 0.5
+		} else if isUpperChar(s1[i]) && isUpperChar(s2[i]) { // both are upper characters
+			r += 0.5
+		} else if (isUpperChar(s1[i]) || isLowerChar(s1[i])) && (isUpperChar(s2[i]) || isLowerChar(s2[i])) { // both are characters
+			r += 0.2
 		} else {
 			break
 		}
@@ -208,10 +245,31 @@ func cmpStrings(s1 string, s2 string) float64 {
 	return float64(r*2) / float64(len(s1)+len(s2))
 }
 
+func isLowerChar(c byte) bool {
+	return c > 96 && c < 123
+}
+
+func isUpperChar(c byte) bool {
+	return c > 32 && c < 91
+}
+
+func isDigitChar(c byte) bool {
+	return c > 47 && c < 58
+}
+
 func CalcVol(a *classify.Arena, n *classify.Node) int {
 	vol := 0
 	for _, childIdx := range n.Children {
 		vol += CalcVol(a, a.Get(childIdx))
+		//if n.Type == html.ElementNode && n.Data == "img" {
+		//	if n.GetAttr("width") != "" && n.GetAttr("height") != "" {
+		//		w, _ := strconv.Atoi(n.GetAttr("width"))
+		//		h, _ := strconv.Atoi(n.GetAttr("height"))
+		//		vol += w * h
+		//	} else {
+		//		vol += 100
+		//	}
+		//} else
 		if n.Type == html.TextNode {
 			vol += len(n.Data)
 		} else {
@@ -359,7 +417,7 @@ func Parse(arena *classify.Arena) ([][][]*classify.Node, error) {
 	for idx, bag := range p.bags {
 		if idx == 9 {
 			if len(bag.Nodes) > 1 {
-				pe := New(arena, .85, ExtendedComparator)
+				pe := New(arena, .7, ExtendedComparator)
 				//pe := New(arena, .129, ExtendedComparator)
 				for _, n := range bag.Nodes {
 					pe.Next(n)
@@ -382,6 +440,15 @@ func Parse(arena *classify.Arena) ([][][]*classify.Node, error) {
 	sort.Slice(finalBags, func(i, j int) bool {
 		return finalBags[i].Volume > finalBags[j].Volume
 	})
+
+	// for _, bag := range finalBags {
+	// 	strs := []string{}
+	// 	for _, n := range bag.Nodes {
+	// 		strs = append(strs, arena.StringifyNode(n.Id))
+	// 	}
+	// 	fmt.Printf("Vol: %v, Len: %v, Cont: %v\n", bag.Volume, len(bag.Nodes), strs)
+	// }
+	// return nil, nil
 
 	bagGroups := groupBags(arena, finalBags)
 	sort.Slice(bagGroups, func(i, j int) bool {

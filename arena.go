@@ -184,6 +184,11 @@ func (a *Arena) CmpColumn(n1 int, n2 int) *CmpResult {
 	return &total
 }
 
+func (a *Arena) StringifyNode(nodeId int) string {
+	n := a.Get(nodeId)
+	return n.String()
+}
+
 func (a *Arena) Stringify(nodeId int) string {
 	n := a.Get(nodeId)
 	res := n.String() + "\n"
