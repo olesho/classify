@@ -189,11 +189,11 @@ func (a *Arena) StringifyNode(nodeId int) string {
 	return n.String()
 }
 
-func (a *Arena) Stringify(nodeId int) string {
+func (a *Arena) StringifyWithChildren(nodeId int) string {
 	n := a.Get(nodeId)
 	res := n.String() + "\n"
 	for _, c := range n.Children {
-		res += "  " + a.Stringify(c)
+		res += "  " + a.StringifyWithChildren(c)
 	}
 	return res
 }

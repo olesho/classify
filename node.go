@@ -21,7 +21,7 @@ type Node struct {
 
 	Children []int
 	Parent   int
-	Id int
+	Id       int
 
 	// additional
 	Volume int
@@ -32,7 +32,7 @@ func NewNode(n html.Node, id int) *Node {
 		Type: n.Type,
 		Data: n.Data,
 		Attr: n.Attr,
-		Id: id,
+		Id:   id,
 	}
 }
 
@@ -105,6 +105,7 @@ func (n *Node) HasClass(c string) bool {
 	return false
 }
 
+// return textual representation for debugging
 func (n Node) String() string {
 	if n.Type == html.ElementNode {
 		return "/" + n.Data + "[" + n.printAttr() + "]"

@@ -390,11 +390,11 @@ func checkNextIntersectionLose(a *classify.Arena, groups []*BagGroup, bag1 *Bag)
 }
 */
 
-func transpose(group *BagGroup) [][]*classify.Node {
+func transpose(group *BagGroup) []Row {
 	size := len(group.Bags[0].Nodes)
-	newGroup := make([][]*classify.Node, size)
+	newGroup := make([]Row, size)
 	for i := 0; i < size; i++ {
-		row := []*classify.Node{}
+		row := Row{}
 		for _, bag := range group.Bags {
 			row = append(row, bag.Nodes[i])
 		}
@@ -403,7 +403,7 @@ func transpose(group *BagGroup) [][]*classify.Node {
 	return newGroup
 }
 
-func Parse(arena *classify.Arena) ([][][]*classify.Node, error) {
+func Parse(arena *classify.Arena) ([][]Row, error) {
 	CalcVol(arena, arena.Get(0))
 
 	// group by tags && types coincided
@@ -414,23 +414,20 @@ func Parse(arena *classify.Arena) ([][][]*classify.Node, error) {
 
 	finalBags := []*Bag{}
 
-	for idx, bag := range p.bags {
-		if idx == 9 {
-			if len(bag.Nodes) > 1 {
-				pe := New(arena, .7, ExtendedComparator)
-				//pe := New(arena, .129, ExtendedComparator)
-				for _, n := range bag.Nodes {
-					pe.Next(n)
-				}
+	for _, bag := range p.bags {
+		if len(bag.Nodes) > 1 {
+			pe := New(arena, .7, ExtendedComparator)
+			//pe := New(arena, .129, ExtendedComparator)
+			for _, n := range bag.Nodes {
+				pe.Next(n)
+			}
 
-				for _, bag := range pe.bags {
-					if len(bag.Nodes) > 1 {
-						for _, n := range bag.Nodes {
-							bag.Volume += n.Volume
-						}
-						finalBags = append(finalBags, bag)
-
+			for _, bag := range pe.bags {
+				if len(bag.Nodes) > 1 {
+					for _, n := range bag.Nodes {
+						bag.Volume += n.Volume
 					}
+					finalBags = append(finalBags, bag)
 				}
 			}
 		}
@@ -456,7 +453,7 @@ func Parse(arena *classify.Arena) ([][][]*classify.Node, error) {
 	})
 
 	// transpose
-	batches := make([][][]*classify.Node, len(bagGroups))
+	batches := make([][]Row, len(bagGroups))
 	for i, g := range bagGroups {
 		batches[i] = transpose(g)
 	}

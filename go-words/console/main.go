@@ -36,8 +36,9 @@ func main() {
 		fmt.Println("===============================================")
 		for _, row := range matrix[*rank] {
 			for _, n := range row {
-				fmt.Println(arena.StringifyNode(n.Id))
+				//fmt.Println(arena.StringifyNode(n.Id))
 				//fmt.Println(arena.StringifyInformation(n.Id))
+				fmt.Println(arena.StringifyWithChildren(n.Id))
 				fmt.Println()
 			}
 			fmt.Println("===============================================")
