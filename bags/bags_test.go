@@ -1,12 +1,13 @@
 package bags
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"os"
-	"github.com/olesho/classify"
-	"fmt"
 	"bufio"
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/olesho/classify"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 )
 
@@ -29,7 +30,6 @@ func TestProcessor(t *testing.T) {
 		fmt.Println()
 	}
 	fmt.Println("===============================================")
-
 
 }
 

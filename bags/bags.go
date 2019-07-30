@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/olesho/classify"
+	classify "github.com/olesho/class"
 	"golang.org/x/net/html"
 )
 
@@ -403,7 +403,7 @@ func transpose(group *BagGroup) []Row {
 	return newGroup
 }
 
-func Parse(arena *classify.Arena) ([][]Row, error) {
+func Parse(arena *classify.Arena) (*Matrix, error) {
 	CalcVol(arena, arena.Get(0))
 
 	// group by tags && types coincided
@@ -453,11 +453,12 @@ func Parse(arena *classify.Arena) ([][]Row, error) {
 	})
 
 	// transpose
-	batches := make([][]Row, len(bagGroups))
+	m := &Matrix{Arena: arena}
+	m.Matrix = make([][]Row, len(bagGroups))
 	for i, g := range bagGroups {
-		batches[i] = transpose(g)
+		m.Matrix[i] = transpose(g)
 	}
-	return batches, nil
+	return m, nil
 
 	//return finalBags[rank].Nodes, nil
 }
