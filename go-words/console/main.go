@@ -5,9 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/olesho/classify"
-	"github.com/olesho/classify/bags"
+	classify "github.com/olesho/class"
+	"github.com/olesho/class/bags"
 	"golang.org/x/net/html"
 )
 
@@ -23,25 +24,28 @@ func main() {
 
 	arena := classify.NewArena(*n)
 
-	matrix, err := bags.Parse(arena)
+	m, err := bags.Parse(arena)
 	if err != nil {
 		panic(err)
 	}
 
-	if len(matrix) >= *rank+1 {
+	if rank := m.Rank(*rank); rank != nil {
 
 		// transform
-		fmt.Println("WIDTH:", len(matrix[*rank][0]))
-		fmt.Println("LENGTH:", len(matrix[*rank]))
-		fmt.Println("===============================================")
-		for _, row := range matrix[*rank] {
+		//fmt.Println("WIDTH:", len(rank.Matrix[0]))
+		//fmt.Println("LENGTH:", len(rank.Matrix))
+		//fmt.Println("===============================================")
+		for _, row := range rank.Nonuniform().Matrix {
+			//fmt.Println(len(row))
 			for _, n := range row {
 				//fmt.Println(arena.StringifyNode(n.Id))
 				//fmt.Println(arena.StringifyInformation(n.Id))
-				fmt.Println(arena.StringifyWithChildren(n.Id))
-				fmt.Println()
+				fmt.Print(`"`+strings.Replace(strings.TrimSpace(arena.StringifyInformation(n.Id)), "\n", "", -1)+`"`, ",")
+				//fmt.Println(arena.StringifyWithChildren(n.Id))
+				//fmt.Println("-----------------------------------------------")
 			}
-			fmt.Println("===============================================")
+			//fmt.Println("===============================================")
+			fmt.Println()
 		}
 	}
 
