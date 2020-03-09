@@ -13,7 +13,10 @@ import (
 func TestYcomb(t *testing.T) {
 	a := assert.New(t)
 
-	f, _ := os.Open("ycomb.html")
+	//f, _ := os.Open("examples/ycomb.html")
+	//f, _ := os.Open("examples/hackernoon.html")
+	//f, _ := os.Open("examples/pravda.html")
+	f, _ := os.Open("examples/bbc.html")
 	defer f.Close()
 	reader := bufio.NewReader(f)
 	n, err := html.Parse(reader)
@@ -22,31 +25,12 @@ func TestYcomb(t *testing.T) {
 	arena := classify.NewArena(*n)
 	m := Clusterize(arena)
 	rank := m.Rank(0)
-	for _, row := range rank.Matrix {
+	for _, row := range rank.Nonuniform().Matrix {
 		for _, n := range row {
-			str, _ := arena.RenderString(n.Id)
+			//str, _ := arena.RenderString(n.Id)
+			str := arena.StringifyInformation(n.Id)
 			fmt.Println(str)
 		}
 		fmt.Println("__________________________________________________________________________________________________")
 	}
 }
-
-//
-//func isin(candidates []Cell, id int) bool {
-//	for _, c := range candidates {
-//		if c.Index == id {
-//			return true
-//		}
-//	}
-//	return false
-//}
-//
-//func cnt(nodes []*classify.Node, id int) int {
-//	c := 0
-//	for _, n := range nodes {
-//		if n.Id == id {
-//			c++
-//		}
-//	}
-//	return c
-//}
