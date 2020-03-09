@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	classify "github.com/olesho/class"
+	"github.com/olesho/classify"
 	"sort"
 )
 

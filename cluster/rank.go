@@ -1,6 +1,6 @@
 package cluster
 
-import classify "github.com/olesho/class"
+import "github.com/olesho/classify"
 
 type Row []*classify.Node
 

@@ -3,7 +3,7 @@ package cluster
 import (
 	"bufio"
 	"fmt"
-	classify "github.com/olesho/class"
+	"github.com/olesho/classify"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 	"os"
