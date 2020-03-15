@@ -11,30 +11,45 @@ type BagGroup struct {
 }
 
 func groupBags(a *classify.Arena, bags []Cluster) []*BagGroup {
-	for i1, bag1 := range bags {
-		if i1+1 < len(bags) {
-			for i2, bag2 := range bags[i1+1:] {
-				if len(bag1.Members) == len(bag2.Members) {
-					if belongs(a, bag1.Members, bag2.Members) {
-						// remove bag2
-						bags = append(bags[:i2], bags[i2+1:]...)
-					} else if belongs(a, bag2.Members, bag1.Members) {
-						// remove bag1
-						bags = append(bags[:i1], bags[i1+1:]...)
+	// order IDs to find intersections further
+	for idx := range bags {
+		sort.Slice(bags[idx].Members, func(i, j int) bool {
+			return bags[idx].Members[i].Id < bags[idx].Members[j].Id
+		})
+	}
+
+	var filteredBags []Cluster
+	var fill = func (bag Cluster) {
+		alreadyReplaced := false
+		for filteredIdx := 0; filteredIdx < len(filteredBags); filteredIdx++ {
+			filtered := filteredBags[filteredIdx]
+			if len(bag.Members) == len(filtered.Members) {
+				if belongs(a, bag.Members, filtered.Members) {
+					return
+				} else if belongs(a, filtered.Members, bag.Members) {
+					if alreadyReplaced {
+						// delete
+						filteredBags = append(filteredBags[:filteredIdx], filteredBags[filteredIdx+1:]...)
+						filteredIdx--
+					} else {
+						// replace
+						filteredBags[filteredIdx] = bag
+						alreadyReplaced = true
 					}
 				}
 			}
 		}
+		if !alreadyReplaced {
+			filteredBags = append(filteredBags, bag)
+		}
 	}
 
 	for _, bag := range bags {
-		sort.Slice(bag.Members, func(i, j int) bool {
-			return bag.Members[i].Id < bag.Members[j].Id
-		})
+		fill(bag)
 	}
 
 	groups := []*BagGroup{}
-	for _, bag1 := range bags {
+	for _, bag1 := range filteredBags {
 		groups = checkNextIntersectionStrict(a, groups, bag1)
 	}
 

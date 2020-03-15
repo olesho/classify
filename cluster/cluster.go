@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"fmt"
 	"github.com/olesho/classify"
 	"sort"
 )
@@ -14,28 +15,54 @@ func (c *Cluster) Volume() float64 {
 	return float64(len(c.Members)) * c.Rate
 }
 
-//type Engine struct {
-//	comparator Comparator
-//	arena *classify.Arena
-//}
-//
-//func New(c Comparator) *Engine {
-//	return &Engine{}
-//}
-//
-//func (e *Engine) Cmp(c1, c2 *Cluster) float64 {
-//	sum := .0
-//	for _, m1 := range c1.Members {
-//		for _, m2 := range c2.Members {
-//			sum += e.comparator.Cmp(m1, m2)
-//		}
-//	}
-//	return sum/(float64(len(c1.Members)*len(c2.Members)))
-//}
+type idxCluster struct {
+	 matrix *RateMatrix
+	 members  []int
+	 rate float64
+}
 
-func Clusterize(arena *classify.Arena) *Matrix {
+func (c *idxCluster) Volume() float64 {
+	return float64(len(c.members)) * c.rate
+}
+
+func (c *idxCluster) rateCandidate(candidateIdx int) float64 {
+	lowestVal := c.matrix.Rows[c.members[0]][candidateIdx]
+	for _, memberIdx := range c.members[1:] {
+		if c.matrix.Rows[memberIdx][candidateIdx] < lowestVal {
+			lowestVal = c.matrix.Rows[memberIdx][candidateIdx]
+		}
+	}
+	return lowestVal
+}
+
+func (c *idxCluster) nextCandidate() bool {
+	var maxCandidateRate float64
+	maxCandidateIdx  := -1
+ 	for _, memberIdx := range c.members {
+		for candidateIndex, val := range c.matrix.Rows[memberIdx] {
+			if val > 0 {
+				rate := c.rateCandidate(candidateIndex)
+				if rate > maxCandidateRate {
+					maxCandidateRate = rate
+					maxCandidateIdx = candidateIndex
+				}
+			}
+		}
+	}
+
+ 	if maxCandidateIdx > -1 {
+		if c.Volume() < maxCandidateRate * float64(len(c.members) + 1) {
+			c.rate = maxCandidateRate
+			c.members = append(c.members, maxCandidateIdx)
+		}
+	}
+	return false
+}
+
+
+func Extract(arena *classify.Arena) *Matrix {
 	s := NewDefaultComparator(arena)
-	m := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
+	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
 		if j <= i {
 			return 0
 		}
@@ -44,7 +71,7 @@ func Clusterize(arena *classify.Arena) *Matrix {
 
 	clusters := []Cluster{}
 	for {
-		_, maxi, maxj := m.Max()
+		_, maxi, maxj := matrix.Max()
 		if maxi < 0 {
 			break
 		}
@@ -52,20 +79,19 @@ func Clusterize(arena *classify.Arena) *Matrix {
 		cluster := Cluster{
 			Members: []*classify.Node{arena.List[maxi]},
 		}
-		m.OffRows(maxi)
-		m.OffCols(maxi)
+		matrix.ExcludeRows(maxi)
+		matrix.ExcludeCols(maxi)
 
 		candidates := []Cell{}
 
-		row := m.Rows[maxi]
-		for j, r := range row {
-			if r > 0 && !m.RowFlags[j] {
+		for j, r := range matrix.Rows[maxi] {
+			if r > 0 && !matrix.RowExcluded[j] {
 				candidates = append(candidates, Cell{j, r})
 			}
 		}
 
-		for i, row := range m.Rows {
-			if row[maxj] > 0 && !m.ColFlags[maxj] {
+		for i, row := range matrix.Rows {
+			if row[maxj] > 0 && !matrix.ColExcluded[maxj] {
 				if i < maxi {
 					candidates = append(candidates, Cell{i, row[maxj]})
 				}
@@ -80,14 +106,14 @@ func Clusterize(arena *classify.Arena) *Matrix {
 			if len(cluster.Members) == 1 {
 				cluster.Rate = candidate.Rate
 				cluster.Members = append(cluster.Members, arena.List[candidate.Index])
-				m.OffCols(candidate.Index)
-				m.OffRows(candidate.Index)
+				matrix.ExcludeCols(candidate.Index)
+				matrix.ExcludeRows(candidate.Index)
 			} else {
 				if cluster.Volume() < candidate.Rate * float64(len(cluster.Members) + 1) {
 					cluster.Rate = candidate.Rate
 					cluster.Members = append(cluster.Members, arena.List[candidate.Index])
-					m.OffCols(candidate.Index)
-					m.OffRows(candidate.Index)
+					matrix.ExcludeCols(candidate.Index)
+					matrix.ExcludeRows(candidate.Index)
 				} else {
 					break
 				}
@@ -102,10 +128,18 @@ func Clusterize(arena *classify.Arena) *Matrix {
 		return clusters[i].Volume() > clusters[j].Volume()
 	})
 
+	//for i, c := range clusters {
+	//	fmt.Println(i, arena.Chain(c.Members[0].Id, 0).XPath())
+	//}
+
 	bagGroups := groupBags(s.arena, clusters)
 	sort.Slice(bagGroups, func(i, j int) bool {
 		return bagGroups[i].Volume > bagGroups[j].Volume
 	})
+
+	for _, g := range bagGroups {
+		fmt.Printf("len: %v, volume: %v, path: %v\n", len(g.Bags[0].Members), g.Volume, s.arena.XPath(g.Bags[0].Members[0].Id, 0))
+	}
 
 	// transpose
 	rm := &Matrix{Arena: s.arena}

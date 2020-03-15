@@ -75,7 +75,14 @@ func (n *Node) isInformative() bool {
 func (n *Node) Classes() []string {
 	for _, a := range n.Attr {
 		if a.Key == "class" {
-			return strings.Fields(a.Val)
+			ss := strings.Fields(a.Val)
+			result := []string{}
+			for _, s := range ss {
+				if !sliceContains(result, s) {
+					result = append(result, s)
+				}
+			}
+			return result
 		}
 	}
 
@@ -152,4 +159,13 @@ func (n Node) Info() (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func sliceContains(sl []string, s string) bool {
+	for _, item := range sl {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }

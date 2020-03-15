@@ -2,7 +2,9 @@
 package classify
 
 import (
+	"fmt"
 	"golang.org/x/net/html"
+	"strings"
 )
 
 type Template struct {
@@ -154,4 +156,42 @@ func (a *Arena) pathArray(init []int, n int) []int {
 		return a.pathArray(append(init, n), parent)
 	}
 	return append(init, n)
+}
+
+func (c Chain) XPath() string {
+	sections := []string{}
+	for i := len(c)-1; i >= 0; i-- {
+		sections = append(sections, elemToXPath(c[i]))
+	}
+	return strings.Join(sections, "/")
+}
+
+func elemToXPath(el *Node) string {
+	if el.Type == html.ElementNode {
+		return el.Data + attrsToXPath(el.Attr)
+	}
+	if el.Type == html.TextNode {
+		return fmt.Sprintf("@text=%s", el.Data)
+	}
+	return ""
+}
+
+func attrsToXPath(attrs []html.Attribute) string {
+	sections := []string{}
+	for _, attr := range attrs {
+		if attr.Key == "class" {
+			classes := strings.Fields(attr.Val)
+			for _, class := range classes {
+				sections = append(sections, fmt.Sprintf(`contains(@class, "%s")`, class))
+			}
+			continue
+		}
+		if attr.Key != "" && attr.Val != "" {
+			sections = append(sections, fmt.Sprintf(`@%s="%s"`, attr.Key, attr.Val))
+		}
+	}
+	if len(sections) > 0 {
+		return "[" + strings.Join(sections, " and ") + "]"
+	}
+	return ""
 }

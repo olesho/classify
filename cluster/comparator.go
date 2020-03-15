@@ -30,7 +30,7 @@ func (c *DefaultComparator) Cmp(n1, n2 *classify.Node) float64 {
 
 	cr := c.cmpChildren(n1, n2)
 	//return rc * 0.1 + ce.Similarity + cr.Similarity
-	return cr.Coincided
+	return ce.Coincided + cr.Coincided
 }
 
 func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) Result {
@@ -67,7 +67,7 @@ func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node)  float64 {
 		if re.Similarity == 0 {
 			return 0 // strict rule
 		}
-		r += re.Similarity
+		r += re.Coincided
 	}
 	return r/float64(size1)
 }
