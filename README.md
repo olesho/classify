@@ -1,9 +1,1 @@
-- use event bus
-- build hyperlinks graph
-- recognize field types:
-  - name
-  - email
-  - date
-  - time
-  - address
-  - price
+Try appending more than 1 candidate

@@ -22,6 +22,13 @@ func NewRateMatrix(size1, size2 int, cmp func(i, j int) float64) *RateMatrix {
 	return &RateMatrix{ cells, offRows, offCols }
 }
 
+func (m *RateMatrix) Cmp(idx1, idx2 int) float64 {
+	if idx1 < idx2 {
+		return m.Rows[idx1][idx2]
+	}
+	return m.Rows[idx2][idx1]
+}
+
 func (m *RateMatrix) Max() (max float64, maxi, maxj int) {
 	max = .0
 	maxi = -1
