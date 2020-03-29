@@ -23,6 +23,17 @@ func (m *Matrix) Nth(rank int) *Series {
 	return nil
 }
 
+func (m *Matrix) BestPattern() (*Series, *classify.Template) {
+	for rank := 0; rank < len(m.Matrix); rank++ {
+		s := &Series{m.Matrix[rank], m.Arena}
+		p := s.Nonuniform().Patterns()
+		if len(p.Chains) > 0 {
+			return s, p
+		}
+	}
+	return nil, nil
+}
+
 func (m *Series) isFieldUniform(index int) bool {
 	val := m.Arena.StringifyInformation(m.Matrix[0][index].Id)
 	for _, row := range m.Matrix {
@@ -69,16 +80,16 @@ func (m *Series) Nonuniform() *Series {
 	return result
 }
 
-func (s *Series) Informative() *Series {
-	result := &Series{Arena: s.Arena, Matrix: make([]Row, len(s.Matrix))}
-	for rowIndex, row := range s.Matrix {
-		//for _, item := range row {
-		//	fmt.Println(item.Data)
-		//}
-		result.Matrix[rowIndex] = row
-	}
-	return result
-}
+//func (s *Series) Informative() *Series {
+//	result := &Series{Arena: s.Arena, Matrix: make([]Row, len(s.Matrix))}
+//	for rowIndex, row := range s.Matrix {
+//		//for _, item := range row {
+//		//	fmt.Println(item.Data)
+//		//}
+//		result.Matrix[rowIndex] = row
+//	}
+//	return result
+//}
 
 func (s *Series) String() string {
 	stopper := 0

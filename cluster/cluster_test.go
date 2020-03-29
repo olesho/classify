@@ -31,9 +31,9 @@ func TestYcomb(t *testing.T) {
 	//	//fmt.Println(strings.Replace(arena.Chain(n.Id, 0).XPath(), "\n", " ", -1))
 	//}
 
-	series := Extract2(arena).Nth(1)
+	series, template := Extract2(arena).BestPattern()
 
-	template := series.Nonuniform().Informative().Patterns()
+	//template := series.Nonuniform().Informative().Patterns()
 	//template := series.Patterns()
 	for _, r := range template.Chains {
 		fmt.Println(r.XPath())

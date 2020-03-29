@@ -1,1 +1,2 @@
-Try appending more than 1 candidate
+- BBC shows strange results
+- hackernoon could have been better: not points to root element properly

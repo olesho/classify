@@ -6,6 +6,8 @@ import (
 	"sort"
 )
 
+const MAX_TRIES = 4
+
 type Cluster struct {
 	Members []*classify.Node
 	Rate float64
@@ -56,7 +58,16 @@ func (c *idxCluster) hasIndex(idx int) bool {
 	return false
 }
 
-func (c *idxCluster) nextCandidate() (float64, int) {
+func isin(val int, arr []int) bool {
+	for _, v := range arr {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *idxCluster) nextCandidate(excluded ... int) (float64, int) {
 	maxCandidateRate := .0
 	maxCandidateIdx := -1
 	for _, memberIdx := range c.members {
@@ -67,7 +78,7 @@ func (c *idxCluster) nextCandidate() (float64, int) {
 				val = c.matrix.Cmp(candidateIndex, memberIdx)
 			}
 
-			if val > 0 && !c.matrix.RowExcluded[candidateIndex] {
+			if val > 0 && !c.matrix.RowExcluded[candidateIndex] && !isin(candidateIndex, excluded) {
 				if !c.hasIndex(candidateIndex) {
 					rate := c.rateCandidate(candidateIndex)
 					if rate > maxCandidateRate {
@@ -81,6 +92,35 @@ func (c *idxCluster) nextCandidate() (float64, int) {
 	return maxCandidateRate, maxCandidateIdx
 }
 
+func (c *idxCluster) next() (*idxCluster, bool) {
+	clone := &idxCluster{
+		matrix: c.matrix,
+		members: make([]int, len(c.members)),
+		rate: c.rate,
+	}
+	copy(clone.members, c.members)
+
+	excluded := make([]int, 0)
+	for i := 0; i < MAX_TRIES; i++ {
+		rate, idx := clone.nextCandidate(excluded...)
+		if idx > -1 {
+			clone.rate = rate
+			clone.members = append(clone.members, idx)
+			excluded = append(excluded, idx)
+			if clone.Volume() > c.Volume() {
+				for _, excludeIdx := range excluded {
+					c.matrix.ExcludeCols(excludeIdx)
+					c.matrix.ExcludeRows(excludeIdx)
+				}
+				return clone, true
+			}
+		} else {
+			break
+		}
+	}
+	return nil, false
+}
+
 func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
 	if c.Volume() < candidateRate * float64(len(c.members) + 1) {
 		c.rate = candidateRate
@@ -89,8 +129,6 @@ func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
 	}
 	return false
 }
-
-
 
 func Extract2(arena *classify.Arena) *Matrix {
 	s := NewDefaultComparator(arena)
@@ -117,25 +155,10 @@ func Extract2(arena *classify.Arena) *Matrix {
 			members: []int{maxi, maxj},
 			rate: maxRate,
 		}
-
-		//if arena.Get(maxi).HasClass("story-card") && arena.Get(maxj).HasClass("story-card") {
-		//	fmt.Println("got")
-		//}
-
-		for nextVal, nextIndex := icluster.nextCandidate(); nextIndex > -1; nextVal, nextIndex = icluster.nextCandidate() {
-			if !icluster.tryAdd(nextVal, nextIndex) {
-				break
-			}
-			matrix.ExcludeCols(nextIndex)
-			matrix.ExcludeRows(nextIndex)
+		
+		for newCluster, ok := icluster.next(); ok; newCluster, ok = icluster.next() {
+			icluster = *newCluster
 		}
-
-		//if arena.Get(icluster.members[0]).HasClass("story-card") {
-		//	fmt.Println(icluster.members)
-		//	for _, n := range icluster.members {
-		//		fmt.Println(arena.Get(n))
-		//	}
-		//}
 
 		cluster := icluster.toCluster(arena)
 		clusters = append(clusters, cluster)
@@ -161,36 +184,40 @@ func Extract2(arena *classify.Arena) *Matrix {
 
 }
 
-//func Extract3(arena *classify.Arena) *Matrix {
-//	s := NewDefaultComparator(arena)
-//	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
-//		if j <= i {
-//			return 0
-//		}
-//		return s.Cmp(s.arena.List[i], s.arena.List[j])
-//	})
-//
-//	//icluster := idxCluster{
-//	//	matrix: matrix,
-//	//	members: []int{1011, 1484, 1028, 1149, 1467, 1365, 1416, 1192, 1450, 1382, 1071, 1132, 1088, 1433, 1501, 1209, 1105, 1166, 1226, 1252, 1045, 1399},
-//	//	rate: 4.5914840714840714,
-//	//}
-//
-//	icluster := idxCluster{
-//		matrix: matrix,
-//		members: []int{1011, 1484, 1028, 1149, 1467, 1365, 1416, 1192, 1450, 1382, 1071, 1132, 1088, 1433, 1501, 1209, 1105, 1166, 1226, 1252, 1045, 1399, 890, 907, 924},
-//		rate: 4.175515275959445,
-//	}
-//
-//	val := icluster.rateCandidate(967)
-//	//val := icluster.rateCandidate(924)
-//	//val := icluster.rateCandidate(890)
-//	fmt.Println("right rate:", val)
-//	fmt.Println(icluster.Volume(), "vs", float64(len(icluster.members))*val)
-//	fmt.Println(icluster.tryAdd(val, 890))
-//
-//	return nil
-//}
+func Extract3(arena *classify.Arena) *Matrix {
+	s := NewDefaultComparator(arena)
+	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
+		if j <= i {
+			return 0
+		}
+		return s.Cmp(s.arena.List[i], s.arena.List[j])
+	})
+
+	//icluster := idxCluster{
+	//	matrix: matrix,
+	//	members: []int{1011, 1484, 1028, 1149, 1467, 1365, 1416, 1192, 1450, 1382, 1071, 1132, 1088, 1433, 1501, 1209, 1105, 1166, 1226, 1252, 1045, 1399},
+	//	rate: 4.5914840714840714,
+	//}
+
+	icluster := idxCluster{
+		matrix: matrix,
+		members: []int{1011, 1484, 1028, 1149, 1467, 1365, 1416, 1192, 1450, 1382, 1071, 1132, 1088, 1433, 1501, 1209, 1105, 1166, 1226, 1252, 1045, 1399, 890, 907, 924},
+		rate: 4.175515275959445,
+	}
+
+	for _, m := range icluster.members {
+		matrix.ExcludeCols(m)
+		matrix.ExcludeRows(m)
+	}
+
+	newCluster, val := icluster.next()
+	//val := icluster.rateCandidate(924)
+	//val := icluster.rateCandidate(890)
+	fmt.Println("right rate:", val)
+	fmt.Println(icluster.Volume(), "vs", newCluster.Volume())
+
+	return nil
+}
 
 func Extract(arena *classify.Arena) *Matrix {
 	s := NewDefaultComparator(arena)
