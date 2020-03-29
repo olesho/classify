@@ -24,7 +24,7 @@ type Node struct {
 	Id       int
 
 	// additional
-	Volume int
+	Volume float64
 }
 
 func NewNode(n html.Node, id int) *Node {

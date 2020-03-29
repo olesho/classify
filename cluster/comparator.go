@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"github.com/olesho/classify"
+	"golang.org/x/net/html"
 	"sort"
 )
 
@@ -18,39 +19,59 @@ func NewDefaultComparator(a *classify.Arena) *DefaultComparator {
 }
 
 func (c *DefaultComparator) Cmp(n1, n2 *classify.Node) float64 {
-	ce := c.cmpElements(n1, n2)
-	if ce.Similarity == 0 {
-		return 0
-	}
-
-	rc := c.cmpColumns(n1, n2)
-	if rc == 0 {
+	if c.cmpColumns(n1, n2) == 0 {
 		return 0 // strict rule
 	}
-
-	cr := c.cmpChildren(n1, n2)
-	//return rc * 0.1 + ce.Similarity + cr.Similarity
-	return ce.Coincided + cr.Coincided
+	return (c.cmpFull(n1, n2) * 2) / (n1.Volume + n2.Volume)
 }
 
-func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) Result {
-	denominator := tokenVolume(n1) + tokenVolume(n2)
+func hasStr(s string, ss []string) bool {
+	for _, n := range ss {
+		if n == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) float64 {
+	if n1.Type == n2.Type && n1.Type == html.TextNode {
+		return 0.1
+		//return cmpStrings(n1.Data, n2.Data).Coincided
+	}
 	if n1.Type == n2.Type {
 		if n1.Data == n2.Data {
-			total := 2.
+			coincided := 1.
 			for _, attr1 := range n1.Attr {
 				for _, attr2 := range n2.Attr {
 					if attr1.Key == attr2.Key {
-						total += 1
-						total += cmpStrings(attr1.Val, attr2.Val).Similarity
+						coincided += 1
+						if attr1.Key == "class" {
+							classes1 := n1.Classes()
+							classes2 := n2.Classes()
+							for _, c1 := range classes1 {
+								if hasStr(c1, classes2) {
+									coincided += 1
+								}
+							}
+						} else {
+							coincided += cmpStrings(attr1.Val, attr2.Val)
+						}
 					}
 				}
 			}
-			return Result{total, total*2 / denominator}
+
+			return coincided
 		}
-		return Result{0,0} // TODO to prevent any errors; but this should be changed for !COMMENT tag etc
+		return 0 // TODO to prevent any errors; but this should be changed for !COMMENT tag etc
 	}
-	return Result{0,0}
+	return 0
+}
+
+func (s *DefaultComparator) cmpFull(n1, n2 *classify.Node) float64 {
+	el := s.cmpElements(n1, n2)
+	ch := s.cmpChildren(n1, n2)
+	return el + ch
 }
 
 func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node)  float64 {
@@ -64,30 +85,30 @@ func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node)  float64 {
 	r := 0.
 	for index := 1; (index < size1) && (index < size2); index++ {
 		re := s.cmpElements(chain1[index], chain2[index])
-		if re.Similarity == 0 {
+		if re == 0 {
 			return 0 // strict rule
 		}
-		r += re.Coincided
+		r += re
 	}
-	return r/float64(size1)
+	return r / float64(size1)
 }
 
 
-func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) Result {
+func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) float64 {
 	size1, size2 := len(n1.Children), len(n2.Children)
 	rating := make([]RateItem, size1*size2)
 	for i1, idx1 := range n1.Children {
 		for i2, idx2 := range n2.Children {
 			idx := (i1+1)*(i2+1) - 1
-			rc := s.cmpElements(s.arena.Get(idx1), s.arena.Get(idx2))
-			rating[idx].Similarity, rating[idx].Coincided = rc.Similarity, rc.Coincided
+			rc := s.cmpFull(s.arena.Get(idx1), s.arena.Get(idx2))
+			rating[idx].Coincided = rc
 			rating[idx].Index1 = i1
 			rating[idx].Index2 = i2
 		}
 	}
 
 	sort.Slice(rating, func(i, j int) bool {
-		return rating[i].Similarity > rating[j].Similarity
+		return rating[i].Coincided > rating[j].Coincided
 	})
 
 	flags1 := make([]bool, size1)
@@ -100,11 +121,10 @@ func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) Result {
 		smallerSize = size2
 	}
 
-	result := Ratio{}
+	coincided := 0.
 	for _, rate := range rating {
 		if !flags1[rate.Index1] && !flags2[rate.Index2] {
-			result.Num += rate.Similarity
-			result.Den += 2
+			coincided += rate.Coincided
 			flags1[rate.Index1] = true
 			flags2[rate.Index2] = true
 			count++
@@ -114,14 +134,11 @@ func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) Result {
 		}
 	}
 
-	return Result{
-		Coincided: result.Num,
-		Similarity: result.Num/result.Den,
-	}
+	return coincided
 }
 
 type RateItem struct {
-	Result
+	Coincided float64
 	Index1 int
 	Index2 int
 }
@@ -133,32 +150,15 @@ type Ratio struct {
 
 type Result struct {
 	Coincided float64
-	Similarity float64
+	Total float64
 }
 
-
-// this counts inform
-func tokenVolume(n *classify.Node) float64 {
-	volume := 1. // has Type
-	if len(n.Data) > 1 { // has Data
-		volume += 1
-	}
-	for _, attr := range n.Attr { // has Attributes
-		if len(attr.Key) > 0 {
-			volume += 1
-		}
-		volume += float64(len(attr.Val))
-		// TODO class and id might be treated differently
-	}
-	return volume
-}
-
-func cmpStrings(s1 string, s2 string) Result {
+func cmpStrings(s1 string, s2 string) float64 {
 	if len(s1) == 0 && len(s2) == 0 {
-		return Result{0,0}
+		return 0
 	}
 	if len(s1) == 0 || len(s2) == 0 {
-		return Result{0,0}
+		return 0
 	}
 
 	var coincided float64
@@ -182,10 +182,11 @@ func cmpStrings(s1 string, s2 string) Result {
 			break
 		}
 	}
-	return Result{
-		Coincided: coincided,
-		Similarity: coincided * 2 / float64(len(s1) + len(s2)),
-	}
+	return coincided*2 / float64(len(s1) + len(s2))
+	//return Result{
+	//	Coincided: coincided,
+	//	Total: float64(len(s1) + len(s2)),
+	//}
 }
 
 

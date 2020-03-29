@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestYcomb(t *testing.T) {
+func TestDev(t *testing.T) {
 	a := assert.New(t)
 
 	//f, _ := os.Open("examples/ycomb.html")
@@ -23,6 +23,24 @@ func TestYcomb(t *testing.T) {
 	a.NoError(err)
 
 	arena := classify.NewArena(*n)
+	arena.CalculateVolume()
+	Extract3(arena)
+}
+
+func TestYcomb(t *testing.T) {
+	a := assert.New(t)
+
+	//f, _ := os.Open("examples/ycomb.html")
+	//f, _ := os.Open("examples/hackernoon.html")
+	//f, _ := os.Open("examples/pravda.html")
+	f, _ := os.Open("examples/bbc.html")
+	defer f.Close()
+	reader := bufio.NewReader(f)
+	n, err := html.Parse(reader)
+	a.NoError(err)
+
+	arena := classify.NewArena(*n)
+	arena.CalculateVolume()
 
 	//for i, n := range arena.List {
 	//	if n.HasClass("rank") {
@@ -31,9 +49,10 @@ func TestYcomb(t *testing.T) {
 	//	//fmt.Println(strings.Replace(arena.Chain(n.Id, 0).XPath(), "\n", " ", -1))
 	//}
 
-	series, template := Extract2(arena).BestPattern()
+	//series, template := Extract2(arena).BestPattern()
+	series := Extract(arena).Nth(0)
 
-	//template := series.Nonuniform().Informative().Patterns()
+	template := series.Nonuniform().Patterns()
 	//template := series.Patterns()
 	for _, r := range template.Chains {
 		fmt.Println(r.XPath())

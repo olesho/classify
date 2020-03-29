@@ -141,49 +141,6 @@ func (a *Arena) PrintList() string {
 	return res
 }
 
-func (a *Arena) CmpColumn(n1 int, n2 int) *CmpResult {
-	var cnt float64
-	curr_el1 := n1
-	curr_el2 := n2
-	p1 := a.Get(curr_el1).Parent
-	p2 := a.Get(curr_el2).Parent
-	next_rate := CmpShallow(a.Get(curr_el1), a.Get(curr_el2))
-
-	if next_rate == nil {
-		return next_rate
-	}
-
-	if p1 == 0 || p2 == 0 {
-		return next_rate
-	}
-
-	cnt++
-
-	var total CmpResult
-	for p1 != p2 {
-		total.Append(*next_rate)
-
-		curr_el1 = a.Get(curr_el1).Parent
-		curr_el2 = a.Get(curr_el2).Parent
-		p1 = a.Get(curr_el1).Parent
-		p2 = a.Get(curr_el2).Parent
-		next_rate = CmpShallow(a.Get(curr_el1), a.Get(curr_el2))
-
-		cnt++
-
-		if next_rate == nil {
-			return next_rate
-		}
-
-		if p1 == 0 || p2 == 0 {
-			return next_rate
-		}
-	}
-
-	total.Append(*next_rate)
-	return &total
-}
-
 func (a *Arena) StringifyNode(nodeId int) string {
 	n := a.Get(nodeId)
 	return n.String()
@@ -215,17 +172,42 @@ func (a *Arena) StringifyInformation(nodeId int) string {
 	return res
 }
 
-func (a *Arena) Rate(nodeId int) int {
-	r := nodePoints
-	n := a.Get(nodeId)
-	for _, attr := range n.Attr {
-		// doubled for compatibility
-		//r += (attrKeyPoints + len(attr.Val)*attrValPoints) * 2
-		r += attrKeyPoints + len(attr.Val)*attrValPoints
+func (a *Arena) CalculateVolume() {
+	for _, el := range a.List {
+		el.Volume = tokenVolume(el)
 	}
+	for id := len(a.List)-1; id > -1; id-- {
+		el := a.List[id]
+		for _, childIdx := range el.Children {
+			el.Volume += a.List[childIdx].Volume
+		}
+	}
+}
 
-	for _, c := range n.Children {
-		r += a.Rate(c)
+func (a *Arena) FindByName(name string) int {
+	for i, el := range a.List {
+		if el.Data == name {
+			return i
+		}
 	}
-	return r
+	return -1
+}
+
+// this counts inform
+func tokenVolume(n *Node) float64 {
+	volume := 1. // has Type
+	if len(n.Data) > 1 { // has Data
+		volume += 1
+	}
+	for _, attr := range n.Attr { // has Attributes
+		if len(attr.Key) > 0 {
+			volume += 1
+		}
+		if attr.Key == "class" {
+			volume += float64(len(n.Classes()))
+		} else {
+			volume += float64(len(attr.Val))
+		}
+	}
+	return volume
 }

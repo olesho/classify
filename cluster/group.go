@@ -63,18 +63,18 @@ func checkNextIntersectionStrict(a *classify.Arena, groups []*BagGroup, bag1 Clu
 				if intersects(a, bag2.Members, bag1.Members) {
 					// add bag1
 					g.Bags = append(g.Bags[:i2], append([]Cluster{bag1}, g.Bags[i2:]...)...)
-					g.Volume += bag1.Volume()
+					g.Volume += bag1.Volume
 					return groups
 				} else if intersects(a, bag1.Members, bag2.Members) {
 					// add bag1
 					g.Bags = append(g.Bags, bag1)
-					g.Volume += bag1.Volume()
+					g.Volume += bag1.Volume
 					return groups
 				}
 			}
 		}
 	}
-	groups = append(groups, &BagGroup{Bags: []Cluster{bag1}, Volume: bag1.Volume()})
+	groups = append(groups, &BagGroup{Bags: []Cluster{bag1}, Volume: bag1.Volume})
 	return groups
 }
 

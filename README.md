@@ -1,2 +1,1 @@
-- BBC shows strange results
-- hackernoon could have been better: not points to root element properly
+fix BBC (rank 1 works)
