@@ -7,31 +7,15 @@ import (
 type Row []*classify.Node
 
 type Matrix struct {
-	Matrix [][]Row
-	Arena  *classify.Arena
+	Matrix []Series
 }
 
 type Series struct {
 	Matrix []Row
 	Arena  *classify.Arena
-}
-
-func (m *Matrix) Nth(rank int) *Series {
-	if len(m.Matrix) > rank {
-		return &Series{m.Matrix[rank], m.Arena}
-	}
-	return nil
-}
-
-func (m *Matrix) BestPattern() (*Series, *classify.Template) {
-	for rank := 0; rank < len(m.Matrix); rank++ {
-		s := &Series{m.Matrix[rank], m.Arena}
-		p := s.Nonuniform().Patterns()
-		if len(p.Chains) > 0 {
-			return s, p
-		}
-	}
-	return nil, nil
+	Volume float64
+	WholesomeVolume float64
+	Size int
 }
 
 func (m *Series) isFieldUniform(index int) bool {
@@ -80,25 +64,8 @@ func (m *Series) Nonuniform() *Series {
 	return result
 }
 
-//func (s *Series) Informative() *Series {
-//	result := &Series{Arena: s.Arena, Matrix: make([]Row, len(s.Matrix))}
-//	for rowIndex, row := range s.Matrix {
-//		//for _, item := range row {
-//		//	fmt.Println(item.Data)
-//		//}
-//		result.Matrix[rowIndex] = row
-//	}
-//	return result
-//}
-
 func (s *Series) String() string {
 	stopper := 0
-	//for i, n := range s.Arena.List {
-	//	if n.Data == "table" && n.HasClass("itemlist") {
-	//		stopper = i
-	//	}
-	//}
-
 	result := ""
 	for _, row := range s.Matrix {
 		for _, item := range row {
@@ -110,12 +77,12 @@ func (s *Series) String() string {
 	return result
 }
 
-func transpose(group *BagGroup) []Row {
-	size := len(group.Bags[0].Members)
+func transpose(group *ClusterGroup) []Row {
+	size := len(group.Clusters[0].Members)
 	newGroup := make([]Row, size)
 	for i := 0; i < size; i++ {
 		row := Row{}
-		for _, bag := range group.Bags {
+		for _, bag := range group.Clusters {
 			row = append(row, bag.Members[i])
 		}
 		newGroup[i] = row

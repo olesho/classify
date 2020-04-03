@@ -5,12 +5,14 @@ import (
 	"sort"
 )
 
-type BagGroup struct {
-	Bags   []Cluster
+type ClusterGroup struct {
+	Clusters   []Cluster
 	Volume float64
+	WholesomeVolume float64
+	Size int
 }
 
-func groupBags(a *classify.Arena, bags []Cluster) []*BagGroup {
+func groupClusters(a *classify.Arena, bags []Cluster) []*ClusterGroup {
 	// order IDs to find intersections further
 	for idx := range bags {
 		sort.Slice(bags[idx].Members, func(i, j int) bool {
@@ -48,33 +50,35 @@ func groupBags(a *classify.Arena, bags []Cluster) []*BagGroup {
 		fill(bag)
 	}
 
-	groups := []*BagGroup{}
-	for _, bag1 := range filteredBags {
-		groups = checkNextIntersectionStrict(a, groups, bag1)
+	groups := []*ClusterGroup{}
+	for _, cluster1 := range filteredBags {
+		groups = checkNextIntersectionStrict(a, groups, cluster1)
 	}
 
 	return groups
 }
 
-func checkNextIntersectionStrict(a *classify.Arena, groups []*BagGroup, bag1 Cluster) []*BagGroup {
+func checkNextIntersectionStrict(a *classify.Arena, groups []*ClusterGroup, cluster1 Cluster) []*ClusterGroup {
 	for _, g := range groups {
-		if len(bag1.Members) == len(g.Bags[0].Members) {
-			for i2, bag2 := range g.Bags {
-				if intersects(a, bag2.Members, bag1.Members) {
-					// add bag1
-					g.Bags = append(g.Bags[:i2], append([]Cluster{bag1}, g.Bags[i2:]...)...)
-					g.Volume += bag1.Volume
+		if len(cluster1.Members) == len(g.Clusters[0].Members) {
+			for i2, cluster2 := range g.Clusters {
+				if intersects(a, cluster2.Members, cluster1.Members) {
+					// add cluster1
+					g.Clusters = append(g.Clusters[:i2], append([]Cluster{cluster1}, g.Clusters[i2:]...)...)
+					g.Volume += cluster1.Volume
+					g.WholesomeVolume += cluster1.WholesomeVolume
 					return groups
-				} else if intersects(a, bag1.Members, bag2.Members) {
-					// add bag1
-					g.Bags = append(g.Bags, bag1)
-					g.Volume += bag1.Volume
+				} else if intersects(a, cluster1.Members, cluster2.Members) {
+					// add cluster1
+					g.Clusters = append(g.Clusters, cluster1)
+					g.Volume += cluster1.Volume
+					g.WholesomeVolume += cluster1.WholesomeVolume
 					return groups
 				}
 			}
 		}
 	}
-	groups = append(groups, &BagGroup{Bags: []Cluster{bag1}, Volume: bag1.Volume})
+	groups = append(groups, &ClusterGroup{Clusters: []Cluster{cluster1}, Volume: cluster1.Volume, WholesomeVolume: cluster1.WholesomeVolume, Size: len(cluster1.Members)})
 	return groups
 }
 

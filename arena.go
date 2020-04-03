@@ -195,9 +195,9 @@ func (a *Arena) FindByName(name string) int {
 
 // this counts inform
 func tokenVolume(n *Node) float64 {
-	volume := 1. // has Type
+	volume := .5 // has Type
 	if len(n.Data) > 1 { // has Data
-		volume += 1
+		volume += .5
 	}
 	for _, attr := range n.Attr { // has Attributes
 		if len(attr.Key) > 0 {

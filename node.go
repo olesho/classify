@@ -46,12 +46,10 @@ func (n *Node) Clone() *Node {
 	copy(c.Attr, n.Attr)
 	c.Children = make([]int, len(n.Children))
 	copy(c.Children, n.Children)
-	//	c.DataArray = make([]string, len(n.DataArray))
-	//	copy(c.DataArray, n.DataArray)
 	return c
 }
 
-func (n *Node) isInformative() bool {
+func (n *Node) isWholesome() bool {
 	if (n.Type == html.TextNode) && (strings.TrimSpace(n.Data) != "") {
 		return true
 	}
@@ -140,7 +138,7 @@ func (n Node) GetAttr(key string) string {
 	return ""
 }
 
-func (n Node) Info() (string, bool) {
+func (n Node) WholesomeInfo() (string, bool) {
 	if n.Type == html.TextNode {
 		return strings.TrimSpace(n.Data), true
 	}

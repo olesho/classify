@@ -11,11 +11,8 @@ type Cluster struct {
 	Members []*classify.Node
 	Rate float64
 	Volume float64
+	WholesomeVolume float64
 }
-
-//func (c *Cluster) Volume() float64 {
-//	return float64(len(c.Members)) * c.Rate
-//}
 
 type idxCluster struct {
 	 arena *classify.Arena
@@ -28,11 +25,13 @@ func (c *idxCluster) Volume() float64 {
 	return float64(len(c.members)) * c.rate
 }
 
-func (c *idxCluster) toCluster(arena *classify.Arena) Cluster {
+func (c *idxCluster) toCluster(arena *classify.Arena, matrix *RateMatrix) Cluster {
 	result := Cluster{
 		Members: make([]*classify.Node, len(c.members)),
 		Rate: c.rate,
 	}
+
+	// total volume derived from the least volume (smallest intersection)
 	smallestVolume := arena.Get(c.members[0]).Volume
 	for i, memberIdx :=  range c.members {
 		result.Members[i] = arena.Get(memberIdx)
@@ -41,6 +40,9 @@ func (c *idxCluster) toCluster(arena *classify.Arena) Cluster {
 		}
 	}
 	result.Volume = smallestVolume * result.Rate * float64(len(c.members))
+
+	result.WholesomeVolume = wholesomeVolume(arena, matrix, c.members)
+
 	return result
 }
 
@@ -111,10 +113,6 @@ func (c *idxCluster) next() (*idxCluster, bool) {
 	for i := 0; i < MAX_TRIES; i++ {
 		rate, idx := clone.nextCandidate(excluded...)
 		if idx > -1 {
-			//if trace {
-			//	fmt.Println(c.arena.StringifyWithChildren(idx))
-			//}
-
 			clone.rate = rate
 			clone.members = append(clone.members, idx)
 			excluded = append(excluded, idx)
@@ -140,8 +138,6 @@ func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
 	}
 	return false
 }
-
-var trace = false
 
 func Extract(arena *classify.Arena) *Matrix {
 	s := NewDefaultComparator(arena)
@@ -174,7 +170,7 @@ func Extract(arena *classify.Arena) *Matrix {
 			icluster = *newCluster
 		}
 
-		cluster := icluster.toCluster(arena)
+		cluster := icluster.toCluster(arena, matrix)
 		clusters = append(clusters, cluster)
 	}
 
@@ -183,35 +179,31 @@ func Extract(arena *classify.Arena) *Matrix {
 		return clusters[i].Rate > clusters[j].Rate
 	})
 
-	bagGroups := groupBags(s.arena, clusters)
-	sort.Slice(bagGroups, func(i, j int) bool {
-		return bagGroups[i].Volume > bagGroups[j].Volume
+	clusterGroups := groupClusters(s.arena, clusters)
+	sort.Slice(clusterGroups, func(i, j int) bool {
+		//return clusterGroups[i].Volume > clusterGroups[j].Volume
+		if clusterGroups[i].WholesomeVolume == clusterGroups[j].WholesomeVolume {
+			return clusterGroups[i].Size > clusterGroups[j].Size
+		}
+		return  clusterGroups[i].WholesomeVolume > clusterGroups[j].WholesomeVolume
 	})
 
 	// transpose
-	rm := &Matrix{Arena: s.arena}
-	rm.Matrix = make([][]Row, len(bagGroups))
-	for i, g := range bagGroups {
-		rm.Matrix[i] = transpose(g)
+	rm := &Matrix{
+		Matrix: make([]Series, len(clusterGroups)),
+	}
+	for i, g := range clusterGroups {
+		rm.Matrix[i] = Series{
+			Matrix: transpose(g),
+			Arena: arena,
+			Volume: g.Volume,
+			WholesomeVolume: g.WholesomeVolume,
+			Size: g.Size,
+		}
 	}
 	return rm
 
 }
-
-//func Extract3(arena *classify.Arena) *Matrix {
-//	s := NewDefaultComparator(arena)
-//	//matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
-//	//	if j <= i {
-//	//		return 0
-//	//	}
-//	//	return s.Cmp(s.arena.List[i], s.arena.List[j])
-//	//})
-//
-//
-//	fmt.Println(s.Cmp(arena.Get(429), arena.Get(507)))
-//
-//	return nil
-//}
 
 type Cell struct {
 	Index int

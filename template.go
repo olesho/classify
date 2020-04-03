@@ -62,7 +62,7 @@ func NewTemplate(a *Arena, nId int) *Template {
 }
 
 func (a *Arena) Chains(nId int) []Chain {
-	infoList := a.Infomative(nId)
+	infoList := a.Wholesome(nId)
 	chains := make([]Chain, len(infoList))
 	for i, infoId := range infoList {
 		chains[i] = a.Chain(infoId, nId)
@@ -70,15 +70,15 @@ func (a *Arena) Chains(nId int) []Chain {
 	return chains
 }
 
-func (a *Arena) Infomative(nId int) []int {
+func (a *Arena) Wholesome(nId int) []int {
 	var r []int
-	if a.List[nId].isInformative() {
+	if a.List[nId].isWholesome() {
 		r = append(r, nId)
 		return r
 	}
 
 	for _, id := range a.List[nId].Children {
-		r = append(r, a.Infomative(id)...)
+		r = append(r, a.Wholesome(id)...)
 	}
 
 	return r

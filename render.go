@@ -40,7 +40,7 @@ var plaintextAbort = errors.New("html: internal error (plaintext abort)")
 
 func (a *Arena) render(w writer, id int) error {
 	n := a.Get(id)
-
+	w.WriteString("\n")
 	// Render non-element nodes; these are the easy cases.
 	switch n.Type {
 	case html.ErrorNode:

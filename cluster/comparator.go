@@ -22,7 +22,8 @@ func (c *DefaultComparator) Cmp(n1, n2 *classify.Node) float64 {
 	if c.cmpColumns(n1, n2) == 0 {
 		return 0 // strict rule
 	}
-	return (c.cmpFull(n1, n2) * 2) / (n1.Volume + n2.Volume)
+	val := c.cmpFull(n1, n2)
+	return  val * 2 / (n1.Volume + n2.Volume)
 }
 
 func hasStr(s string, ss []string) bool {
@@ -36,7 +37,7 @@ func hasStr(s string, ss []string) bool {
 
 func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) float64 {
 	if n1.Type == n2.Type && n1.Type == html.TextNode {
-		return 0.1
+		return 0.5
 		//return cmpStrings(n1.Data, n2.Data).Coincided
 	}
 	if n1.Type == n2.Type {
@@ -74,7 +75,7 @@ func (s *DefaultComparator) cmpFull(n1, n2 *classify.Node) float64 {
 	return el + ch
 }
 
-func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node)  float64 {
+func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node) float64 {
 	chain1 := s.arena.Chain(n1.Id, 0)
 	chain2 := s.arena.Chain(n2.Id, 0)
 	size1 := len(chain1)
@@ -183,10 +184,6 @@ func cmpStrings(s1 string, s2 string) float64 {
 		}
 	}
 	return coincided*2 / float64(len(s1) + len(s2))
-	//return Result{
-	//	Coincided: coincided,
-	//	Total: float64(len(s1) + len(s2)),
-	//}
 }
 
 

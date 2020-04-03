@@ -10,22 +10,25 @@ import (
 	"testing"
 )
 
-func TestDev(t *testing.T) {
-	a := assert.New(t)
-
-	//f, _ := os.Open("examples/ycomb.html")
-	f, _ := os.Open("examples/hackernoon.html")
-	//f, _ := os.Open("examples/pravda.html")
-	//f, _ := os.Open("examples/bbc.html")
-	defer f.Close()
-	reader := bufio.NewReader(f)
-	n, err := html.Parse(reader)
-	a.NoError(err)
-
-	arena := classify.NewArena(*n)
-	arena.CalculateVolume()
-	Extract3(arena)
-}
+//func TestRenderLabels(t *testing.T) {
+//	a := assert.New(t)
+//	f, _ := os.Open("examples/bbc.html")
+//	defer f.Close()
+//	reader := bufio.NewReader(f)
+//	n, err := html.Parse(reader)
+//	a.NoError(err)
+//
+//	arena := classify.NewArena(*n)
+//	for i, el := range arena.List {
+//		arena.List[i].Attr = append(el.Attr, html.Attribute{
+//			Key: "arid",
+//			Val: fmt.Sprint(el.Id),
+//		})
+//	}
+//	text, _ := arena.RenderString(0)
+//
+//	fmt.Println(text)
+//}
 
 func TestYcomb(t *testing.T) {
 	a := assert.New(t)
@@ -34,6 +37,8 @@ func TestYcomb(t *testing.T) {
 	//f, _ := os.Open("examples/hackernoon.html")
 	//f, _ := os.Open("examples/pravda.html")
 	f, _ := os.Open("examples/bbc.html")
+	//f, _ := os.Open("examples/cnn.html")
+	//f, _ := os.Open("examples/test2.html")
 	defer f.Close()
 	reader := bufio.NewReader(f)
 	n, err := html.Parse(reader)
@@ -41,31 +46,12 @@ func TestYcomb(t *testing.T) {
 
 	arena := classify.NewArena(*n)
 	arena.CalculateVolume()
-
-	//for i, n := range arena.List {
-	//	if n.HasClass("rank") {
-	//		fmt.Println(i)
-	//	}
-	//	//fmt.Println(strings.Replace(arena.Chain(n.Id, 0).XPath(), "\n", " ", -1))
-	//}
-
-	//series, template := Extract2(arena).BestPattern()
-	series := Extract(arena).Nth(0)
-
+	series := Extract(arena).Matrix[2]
 	template := series.Nonuniform().Patterns()
-	//template := series.Patterns()
 	for _, r := range template.Chains {
 		fmt.Println(r.XPath())
 	}
-	fmt.Println(len(series.Matrix))
+	fmt.Printf("size: %v, volume: %v, wholesome volume: %v\n", series.Size, series.Volume, series.WholesomeVolume)
 	return
 
-	//for _, row := range series.Nonuniform().Matrix {
-	//	for _, n := range row {
-	//		//str, _ := arena.RenderString(n.Id)
-	//		str := arena.StringifyInformation(n.Id)
-	//		fmt.Println(str)
-	//	}
-	//	fmt.Println("__________________________________________________________________________________________________")
-	//}
 }
