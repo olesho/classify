@@ -92,7 +92,7 @@ func TestComparator(t *testing.T) {
 	a.NoError(err)
 
 	arena := classify.NewArena(*n)
-	arena.CalculateVolume()
+	Init(arena)
 	c := NewDefaultComparator(arena)
 
 	idx1 := 4

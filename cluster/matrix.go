@@ -1,7 +1,7 @@
 package cluster
 
 type RateMatrix struct {
-	Rows []RateRow
+	Rows        []RateRow
 	RowExcluded []bool
 	ColExcluded []bool
 }
@@ -12,14 +12,14 @@ func NewRateMatrix(size1, size2 int, cmp func(i, j int) float64) *RateMatrix {
 	cells := make([]RateRow, size1)
 	offRows := make([]bool, size1)
 	offCols := make([]bool, size2)
-	for i  := range cells {
+	for i := range cells {
 		cells[i] = make([]float64, size2)
 		for j := range cells[i] {
 			val := cmp(i, j)
 			cells[i][j] = val
 		}
 	}
-	return &RateMatrix{ cells, offRows, offCols }
+	return &RateMatrix{cells, offRows, offCols}
 }
 
 func (m *RateMatrix) Cmp(idx1, idx2 int) float64 {

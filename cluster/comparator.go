@@ -15,7 +15,7 @@ type DefaultComparator struct {
 }
 
 func NewDefaultComparator(a *classify.Arena) *DefaultComparator {
-	return &DefaultComparator{ a }
+	return &DefaultComparator{a}
 }
 
 func (c *DefaultComparator) Cmp(n1, n2 *classify.Node) float64 {
@@ -23,7 +23,7 @@ func (c *DefaultComparator) Cmp(n1, n2 *classify.Node) float64 {
 		return 0 // strict rule
 	}
 	val := c.cmpFull(n1, n2)
-	return  val * 2 / (n1.Volume + n2.Volume)
+	return val * 2 / (GetVolume(n1) + GetVolume(n2))
 }
 
 func hasStr(s string, ss []string) bool {
@@ -37,8 +37,8 @@ func hasStr(s string, ss []string) bool {
 
 func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) float64 {
 	if n1.Type == n2.Type && n1.Type == html.TextNode {
-		return 0.5
-		//return cmpStrings(n1.Data, n2.Data).Coincided
+		return 1
+		//return cmpStrings(n1.Data, n2.Data)
 	}
 	if n1.Type == n2.Type {
 		if n1.Data == n2.Data {
@@ -71,6 +71,10 @@ func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) float64 {
 
 func (s *DefaultComparator) cmpFull(n1, n2 *classify.Node) float64 {
 	el := s.cmpElements(n1, n2)
+	// strict tag names should coincide
+	if el == 0 {
+		return 0
+	}
 	ch := s.cmpChildren(n1, n2)
 	return el + ch
 }
@@ -93,7 +97,6 @@ func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node) float64 {
 	}
 	return r / float64(size1)
 }
-
 
 func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) float64 {
 	size1, size2 := len(n1.Children), len(n2.Children)
@@ -125,6 +128,9 @@ func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) float64 {
 	coincided := 0.
 	for _, rate := range rating {
 		if !flags1[rate.Index1] && !flags2[rate.Index2] {
+			if rate.Coincided == 0 {
+				break
+			}
 			coincided += rate.Coincided
 			flags1[rate.Index1] = true
 			flags2[rate.Index2] = true
@@ -140,8 +146,8 @@ func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) float64 {
 
 type RateItem struct {
 	Coincided float64
-	Index1 int
-	Index2 int
+	Index1    int
+	Index2    int
 }
 
 type Ratio struct {
@@ -151,7 +157,7 @@ type Ratio struct {
 
 type Result struct {
 	Coincided float64
-	Total float64
+	Total     float64
 }
 
 func cmpStrings(s1 string, s2 string) float64 {
@@ -183,9 +189,8 @@ func cmpStrings(s1 string, s2 string) float64 {
 			break
 		}
 	}
-	return coincided*2 / float64(len(s1) + len(s2))
+	return coincided * 2 / float64(len(s1)+len(s2))
 }
-
 
 func isLowerChar(c byte) bool {
 	return c > 96 && c < 123
@@ -198,4 +203,3 @@ func isUpperChar(c byte) bool {
 func isDigitChar(c byte) bool {
 	return c > 47 && c < 58
 }
-

@@ -13,9 +13,10 @@ type Matrix struct {
 type Series struct {
 	Matrix []Row
 	Arena  *classify.Arena
-	Volume float64
-	WholesomeVolume float64
-	Size int
+	Group  *ClusterGroup
+	//Volume float64
+	//WholesomeVolume float64
+	//Size int
 }
 
 func (m *Series) isFieldUniform(index int) bool {

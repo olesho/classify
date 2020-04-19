@@ -24,7 +24,8 @@ type Node struct {
 	Id       int
 
 	// additional
-	Volume float64
+	Ext interface{}
+	//Volume float64
 }
 
 func NewNode(n html.Node, id int) *Node {
@@ -136,27 +137,6 @@ func (n Node) GetAttr(key string) string {
 		}
 	}
 	return ""
-}
-
-func (n Node) WholesomeInfo() (string, bool) {
-	if n.Type == html.TextNode {
-		return strings.TrimSpace(n.Data), true
-	}
-	if n.Type == html.ElementNode && n.Data == "img" {
-		for _, attr := range n.Attr {
-			if attr.Key == "src" {
-				return attr.Val, true
-			}
-		}
-	}
-	if n.Type == html.ElementNode && n.Data == "a" {
-		for _, attr := range n.Attr {
-			if attr.Key == "href" {
-				return attr.Val, true
-			}
-		}
-	}
-	return "", false
 }
 
 func sliceContains(sl []string, s string) bool {

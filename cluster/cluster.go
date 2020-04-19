@@ -1,24 +1,57 @@
 package cluster
 
 import (
+	"fmt"
 	"github.com/olesho/classify"
+	"golang.org/x/net/html"
 	"sort"
+	"strings"
 )
 
 const MAX_TRIES = 4
 
+const (
+	NotField = iota
+	TextField
+	LinkField
+	ImageField
+)
+
+type Field struct {
+	Type    int
+	Content []string
+}
+
+func (f Field) String() string {
+	s := ""
+	switch f.Type {
+	case TextField:
+		s += "type:text\n"
+	case LinkField:
+		s += "type:link\n"
+	case ImageField:
+		s += "type:image\n"
+	}
+	for i, f := range f.Content {
+		s += fmt.Sprintf("%v: %v\n", i, f)
+	}
+	return s
+}
+
 type Cluster struct {
-	Members []*classify.Node
-	Rate float64
-	Volume float64
-	WholesomeVolume float64
+	Arena         *classify.Arena
+	TemplateArena *classify.Arena
+	Members       []*classify.Node
+	Rate          float64
+	Volume        float64
+	Table         []Field
 }
 
 type idxCluster struct {
-	 arena *classify.Arena
-	 matrix *RateMatrix
-	 members  []int
-	 rate float64
+	arena   *classify.Arena
+	matrix  *RateMatrix
+	members []int
+	rate    float64
 }
 
 func (c *idxCluster) Volume() float64 {
@@ -26,22 +59,27 @@ func (c *idxCluster) Volume() float64 {
 }
 
 func (c *idxCluster) toCluster(arena *classify.Arena, matrix *RateMatrix) Cluster {
+	templateArena := MergeAll(arena, matrix, c.members)
 	result := Cluster{
-		Members: make([]*classify.Node, len(c.members)),
-		Rate: c.rate,
+		Arena:         c.arena,
+		TemplateArena: templateArena,
+		Members:       make([]*classify.Node, len(c.members)),
+		Rate:          c.rate,
 	}
+
+	result.Table = result.WholesomeGroupTable()
 
 	// total volume derived from the least volume (smallest intersection)
-	smallestVolume := arena.Get(c.members[0]).Volume
-	for i, memberIdx :=  range c.members {
+	//smallestVolume := GetVolume(arena.Get(c.members[0]))
+	for i, memberIdx := range c.members {
 		result.Members[i] = arena.Get(memberIdx)
-		if arena.Get(memberIdx).Volume < smallestVolume {
-			smallestVolume = arena.Get(memberIdx).Volume
-		}
+		//if GetVolume(arena.Get(memberIdx)) < smallestVolume {
+		//	smallestVolume = GetVolume(arena.Get(memberIdx))
+		//}
 	}
-	result.Volume = smallestVolume * result.Rate * float64(len(c.members))
+	//result.Volume = smallestVolume * result.Rate * float64(len(c.members))
 
-	result.WholesomeVolume = wholesomeVolume(arena, matrix, c.members)
+	//result.WholesomeVolume = wholesomeVolume(arena, matrix, c.members)
 
 	return result
 }
@@ -75,7 +113,7 @@ func isin(val int, arr []int) bool {
 	return false
 }
 
-func (c *idxCluster) nextCandidate(excluded ... int) (float64, int) {
+func (c *idxCluster) nextCandidate(excluded ...int) (float64, int) {
 	maxCandidateRate := .0
 	maxCandidateIdx := -1
 	for _, memberIdx := range c.members {
@@ -102,10 +140,10 @@ func (c *idxCluster) nextCandidate(excluded ... int) (float64, int) {
 
 func (c *idxCluster) next() (*idxCluster, bool) {
 	clone := &idxCluster{
-		arena: c.arena,
-		matrix: c.matrix,
+		arena:   c.arena,
+		matrix:  c.matrix,
 		members: make([]int, len(c.members)),
-		rate: c.rate,
+		rate:    c.rate,
 	}
 	copy(clone.members, c.members)
 
@@ -131,7 +169,7 @@ func (c *idxCluster) next() (*idxCluster, bool) {
 }
 
 func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
-	if c.Volume() < candidateRate * float64(len(c.members) + 1) {
+	if c.Volume() < candidateRate*float64(len(c.members)+1) {
 		c.rate = candidateRate
 		c.members = append(c.members, candidateIndex)
 		return true
@@ -140,6 +178,7 @@ func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
 }
 
 func Extract(arena *classify.Arena) *Matrix {
+	Init(arena)
 	s := NewDefaultComparator(arena)
 	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
 		if j <= i {
@@ -160,14 +199,24 @@ func Extract(arena *classify.Arena) *Matrix {
 		matrix.ExcludeRows(maxj)
 
 		icluster := idxCluster{
-			arena: arena,
-			matrix: matrix,
+			arena:   arena,
+			matrix:  matrix,
 			members: []int{maxi, maxj},
-			rate: maxRate,
+			rate:    maxRate,
 		}
 
-		for newCluster, ok := icluster.next(); ok; newCluster, ok = icluster.next() {
-			icluster = *newCluster
+		// more complex and slow version
+		//for newCluster, ok := icluster.next(); ok; newCluster, ok = icluster.next() {
+		//	icluster = *newCluster
+		//}
+
+		// more simple and fast
+		for nextVal, nextIndex := icluster.nextCandidate(); nextIndex > -1; nextVal, nextIndex = icluster.nextCandidate() {
+			if !icluster.tryAdd(nextVal, nextIndex) {
+				break
+			}
+			matrix.ExcludeCols(nextIndex)
+			matrix.ExcludeRows(nextIndex)
 		}
 
 		cluster := icluster.toCluster(arena, matrix)
@@ -182,10 +231,13 @@ func Extract(arena *classify.Arena) *Matrix {
 	clusterGroups := groupClusters(s.arena, clusters)
 	sort.Slice(clusterGroups, func(i, j int) bool {
 		//return clusterGroups[i].Volume > clusterGroups[j].Volume
-		if clusterGroups[i].WholesomeVolume == clusterGroups[j].WholesomeVolume {
-			return clusterGroups[i].Size > clusterGroups[j].Size
-		}
-		return  clusterGroups[i].WholesomeVolume > clusterGroups[j].WholesomeVolume
+
+		//if clusterGroups[i].WholesomeVolume == clusterGroups[j].WholesomeVolume {
+		//	return clusterGroups[i].Size > clusterGroups[j].Size
+		//}
+		//return  clusterGroups[i].WholesomeVolume > clusterGroups[j].WholesomeVolume
+
+		return clusterGroups[i].GroupVolume > clusterGroups[j].GroupVolume
 	})
 
 	// transpose
@@ -195,10 +247,8 @@ func Extract(arena *classify.Arena) *Matrix {
 	for i, g := range clusterGroups {
 		rm.Matrix[i] = Series{
 			Matrix: transpose(g),
-			Arena: arena,
-			Volume: g.Volume,
-			WholesomeVolume: g.WholesomeVolume,
-			Size: g.Size,
+			Arena:  arena,
+			Group:  g,
 		}
 	}
 	return rm
@@ -207,5 +257,117 @@ func Extract(arena *classify.Arena) *Matrix {
 
 type Cell struct {
 	Index int
-	Rate float64
+	Rate  float64
+}
+
+func (c *Cluster) TemplateVolume() float64 {
+	vol := .0
+	for _, row := range c.Table {
+		switch row.Type {
+		case TextField:
+			vol += textsVolume(row.Content)
+		case LinkField:
+			vol += linksVolume(row.Content)
+		case ImageField:
+			vol += imgsVolume(row.Content)
+		}
+	}
+	return vol
+}
+
+func uniform(strs []string) bool {
+	for _, s := range strs[1:] {
+		if s != strs[0] {
+			return false
+		}
+	}
+	return true
+}
+
+func textsVolume(strs []string) float64 {
+	r := .0
+	for _, s := range strs {
+		r += float64(len(s))
+	}
+	return r
+
+	//smallest := float64(len(strs[0]))
+	//for _, s := range strs[1:] {
+	//	val := float64(len(s))
+	//	if val < smallest {
+	//		smallest = val
+	//	}
+	//}
+	//return smallest * float64(len(strs))
+}
+
+func linksVolume(strs []string) float64 {
+	r := .0
+	for _, s := range strs {
+		if len(s) > 0 {
+			r += 0.1
+		}
+	}
+	return r
+}
+
+func imgsVolume(strs []string) float64 {
+	r := .0
+	for _, s := range strs {
+		if len(s) > 0 {
+			r += 0.1
+		}
+	}
+	return r
+}
+
+func (c *Cluster) WholesomeGroupTable() []Field {
+	result := make([]Field, 0)
+	for _, n := range c.TemplateArena.List {
+		if _, fieldType := WholesomeInfo(n); fieldType != NotField {
+			ids := n.Ext.(*Additional).GroupIds
+			if len(ids) == len(c.Members) {
+				if values := extractFields(c.Arena, ids, fieldType); values != nil {
+					result = append(result, *values)
+				}
+			}
+		}
+	}
+	return result
+}
+
+func extractFields(arena *classify.Arena, ids []int, fieldType int) *Field {
+	values := &Field{}
+	values.Content = make([]string, len(ids))
+	for i, id := range ids {
+		values.Content[i], values.Type = WholesomeInfo(arena.Get(id))
+		if values.Type != fieldType {
+			return nil
+		}
+	}
+	if !uniform(values.Content) {
+		return values
+	}
+	return nil
+}
+
+func WholesomeInfo(n *classify.Node) (string, int) {
+	if n.Type == html.TextNode {
+		return strings.TrimSpace(n.Data), TextField
+	}
+	if n.Type == html.ElementNode && n.Data == "img" {
+		for _, attr := range n.Attr {
+			if attr.Key == "src" {
+				return attr.Val, ImageField
+			}
+		}
+	}
+	if n.Type == html.ElementNode && n.Data == "a" {
+		for _, attr := range n.Attr {
+			if attr.Key == "href" {
+				return attr.Val, LinkField
+			}
+		}
+	}
+	return "", NotField
 }

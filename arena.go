@@ -114,6 +114,7 @@ func (a *Arena) transform(node_index int, n html.Node) {
 		n.Type == html.ErrorNode ||
 		(n.Type == html.ElementNode && strings.ToLower(n.Data) == "noscript") ||
 		(n.Type == html.ElementNode && strings.ToLower(n.Data) == "script") ||
+		(n.Type == html.ElementNode && strings.ToLower(n.Data) == "style") ||
 		(n.Type == html.TextNode && strings.TrimSpace(n.Data) == "") {
 		return
 	}
@@ -172,18 +173,6 @@ func (a *Arena) StringifyInformation(nodeId int) string {
 	return res
 }
 
-func (a *Arena) CalculateVolume() {
-	for _, el := range a.List {
-		el.Volume = tokenVolume(el)
-	}
-	for id := len(a.List)-1; id > -1; id-- {
-		el := a.List[id]
-		for _, childIdx := range el.Children {
-			el.Volume += a.List[childIdx].Volume
-		}
-	}
-}
-
 func (a *Arena) FindByName(name string) int {
 	for i, el := range a.List {
 		if el.Data == name {
@@ -193,21 +182,20 @@ func (a *Arena) FindByName(name string) int {
 	return -1
 }
 
-// this counts inform
-func tokenVolume(n *Node) float64 {
-	volume := .5 // has Type
-	if len(n.Data) > 1 { // has Data
-		volume += .5
+func (a *Arena) addCloned(res *Arena, root int, offset int) {
+	node := a.Get(root)
+	clone := node.Clone()
+	clone.Id = len(res.List)
+	res.List = append(res.List, clone)
+	for i, item := range clone.Children {
+		clone.Children[i] = clone.Children[i] - offset
+		a.addCloned(res, item, offset)
 	}
-	for _, attr := range n.Attr { // has Attributes
-		if len(attr.Key) > 0 {
-			volume += 1
-		}
-		if attr.Key == "class" {
-			volume += float64(len(n.Classes()))
-		} else {
-			volume += float64(len(attr.Val))
-		}
-	}
-	return volume
+	return
+}
+
+func (a *Arena) CloneBranch(root int) (res *Arena) {
+	res = NewArenaRoot()
+	a.addCloned(res, root, root)
+	return res
 }

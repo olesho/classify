@@ -49,7 +49,7 @@ func TestGetInformative(t *testing.T) {
 	`))
 	a := NewArena(*n)
 
-	ids := a.Infomative(1)
+	ids := a.Wholesome(1)
 
 	if !a.List[a.List[ids[1]].Parent].HasClass("clearfix") {
 		t.Error("HasClass not working")
@@ -153,7 +153,7 @@ func TestCloneArena(t *testing.T) {
 
 	idx := ar1.IndexesByAttr("id", "block_1")[0]
 
-	ar2 := ar1.Clone(idx)
+	ar2 := ar1.CloneBranch(idx)
 	s1, err := ar1.RenderString(idx)
 	a.NoError(err)
 	s2, err := ar2.RenderString(0)

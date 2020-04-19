@@ -136,6 +136,50 @@ func mergeChains(c1, c2 Chain) Chain {
 	return res
 }
 
+func MergeShallow(n1 *Node, n2 *Node) *Node {
+	if n1.Type == n2.Type {
+		r := Node{
+			Type: n1.Type,
+			Attr: make([]html.Attribute, 0),
+		}
+
+		if n1.Data == n2.Data {
+			r.Data = n1.Data
+			for _, a1 := range n1.Attr {
+				for _, a2 := range n2.Attr {
+					if a1.Key == a2.Key && a1.Key != "class" {
+						attr := html.Attribute{Key: a1.Key}
+						if a1.Val == a2.Val {
+							attr.Val = a1.Val
+						}
+						r.Attr = append(r.Attr, attr)
+					}
+				}
+			}
+
+			classes1 := n1.Classes()
+			classes2 := n2.Classes()
+			for _, c1 := range classes1 {
+				for _, c2 := range classes2 {
+					if c1 == c2 {
+						r.AddClass(c1)
+					}
+				}
+			}
+
+		}
+
+		/*
+			if n1.DataArray != nil && n2.DataArray != nil {
+				r.DataArray = append(n1.DataArray, n2.DataArray...)
+			}
+		*/
+
+		return &r
+	}
+	return nil
+}
+
 func (a *Arena) XPath(n int, stopper int) string {
 	parent := a.Get(n).Parent
 	if parent > 0 && parent != stopper {
@@ -160,7 +204,7 @@ func (a *Arena) pathArray(init []int, n int) []int {
 
 func (c Chain) XPath() string {
 	sections := []string{}
-	for i := len(c)-1; i >= 0; i-- {
+	for i := len(c) - 1; i >= 0; i-- {
 		sections = append(sections, elemToXPath(c[i]))
 	}
 	return strings.Join(sections, "/")

@@ -6,10 +6,11 @@ import (
 )
 
 type ClusterGroup struct {
-	Clusters   []Cluster
-	Volume float64
+	Clusters        []Cluster
+	Volume          float64
 	WholesomeVolume float64
-	Size int
+	GroupVolume     float64
+	Size            int
 }
 
 func groupClusters(a *classify.Arena, bags []Cluster) []*ClusterGroup {
@@ -21,7 +22,7 @@ func groupClusters(a *classify.Arena, bags []Cluster) []*ClusterGroup {
 	}
 
 	var filteredBags []Cluster
-	var fill = func (bag Cluster) {
+	var fill = func(bag Cluster) {
 		alreadyReplaced := false
 		for filteredIdx := 0; filteredIdx < len(filteredBags); filteredIdx++ {
 			filtered := filteredBags[filteredIdx]
@@ -66,19 +67,27 @@ func checkNextIntersectionStrict(a *classify.Arena, groups []*ClusterGroup, clus
 					// add cluster1
 					g.Clusters = append(g.Clusters[:i2], append([]Cluster{cluster1}, g.Clusters[i2:]...)...)
 					g.Volume += cluster1.Volume
-					g.WholesomeVolume += cluster1.WholesomeVolume
+					//					g.WholesomeVolume += cluster1.WholesomeVolume
+					g.GroupVolume += cluster1.TemplateVolume()
 					return groups
 				} else if intersects(a, cluster1.Members, cluster2.Members) {
 					// add cluster1
 					g.Clusters = append(g.Clusters, cluster1)
 					g.Volume += cluster1.Volume
-					g.WholesomeVolume += cluster1.WholesomeVolume
+					//					g.WholesomeVolume += cluster1.WholesomeVolume
+					g.GroupVolume += cluster1.TemplateVolume()
 					return groups
 				}
 			}
 		}
 	}
-	groups = append(groups, &ClusterGroup{Clusters: []Cluster{cluster1}, Volume: cluster1.Volume, WholesomeVolume: cluster1.WholesomeVolume, Size: len(cluster1.Members)})
+	groups = append(groups, &ClusterGroup{
+		Clusters: []Cluster{cluster1},
+		Volume:   cluster1.Volume,
+		//		WholesomeVolume: cluster1.WholesomeVolume,
+		GroupVolume: cluster1.TemplateVolume(),
+		Size:        len(cluster1.Members),
+	})
 	return groups
 }
 
