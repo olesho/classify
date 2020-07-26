@@ -1,24 +1,25 @@
 package cluster
 
 import (
-	"github.com/olesho/classify"
-	"golang.org/x/net/html"
 	"sort"
+
+	"github.com/olesho/classify/arena"
+	"golang.org/x/net/html"
 )
 
 type Comparator interface {
-	Cmp(n1, n2 *classify.Node) float64
+	Cmp(n1, n2 *arena.Node) float64
 }
 
 type DefaultComparator struct {
-	arena *classify.Arena
+	arena *arena.Arena
 }
 
-func NewDefaultComparator(a *classify.Arena) *DefaultComparator {
+func NewDefaultComparator(a *arena.Arena) *DefaultComparator {
 	return &DefaultComparator{a}
 }
 
-func (c *DefaultComparator) Cmp(n1, n2 *classify.Node) float64 {
+func (c *DefaultComparator) Cmp(n1, n2 *arena.Node) float64 {
 	if c.cmpColumns(n1, n2) == 0 {
 		return 0 // strict rule
 	}
@@ -35,7 +36,7 @@ func hasStr(s string, ss []string) bool {
 	return false
 }
 
-func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) float64 {
+func (s *DefaultComparator) cmpElements(n1, n2 *arena.Node) float64 {
 	if n1.Type == n2.Type && n1.Type == html.TextNode {
 		return 1
 		//return cmpStrings(n1.Data, n2.Data)
@@ -69,7 +70,7 @@ func (s *DefaultComparator) cmpElements(n1, n2 *classify.Node) float64 {
 	return 0
 }
 
-func (s *DefaultComparator) cmpFull(n1, n2 *classify.Node) float64 {
+func (s *DefaultComparator) cmpFull(n1, n2 *arena.Node) float64 {
 	el := s.cmpElements(n1, n2)
 	// strict tag names should coincide
 	if el == 0 {
@@ -79,7 +80,7 @@ func (s *DefaultComparator) cmpFull(n1, n2 *classify.Node) float64 {
 	return el + ch
 }
 
-func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node) float64 {
+func (s *DefaultComparator) cmpColumns(n1, n2 *arena.Node) float64 {
 	chain1 := s.arena.Chain(n1.Id, 0)
 	chain2 := s.arena.Chain(n2.Id, 0)
 	size1 := len(chain1)
@@ -98,7 +99,7 @@ func (s *DefaultComparator) cmpColumns(n1, n2 *classify.Node) float64 {
 	return r / float64(size1)
 }
 
-func (s *DefaultComparator) cmpChildren(n1, n2 *classify.Node) float64 {
+func (s *DefaultComparator) cmpChildren(n1, n2 *arena.Node) float64 {
 	size1, size2 := len(n1.Children), len(n2.Children)
 	rating := make([]RateItem, size1*size2)
 	for i1, idx1 := range n1.Children {

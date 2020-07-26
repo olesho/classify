@@ -1,13 +1,14 @@
 package cluster
 
 import (
-	"github.com/olesho/classify"
-	"golang.org/x/net/html"
 	"sort"
 	"strings"
+
+	"github.com/olesho/classify/arena"
+	"golang.org/x/net/html"
 )
 
-func MergeAll(arena *classify.Arena, matrix *RateMatrix, indexes []int) *classify.Arena {
+func MergeAll(arena *arena.Arena, matrix *RateMatrix, indexes []int) *arena.Arena {
 	rootId := indexes[0]
 	templateArena := initClone(arena, matrix, rootId)
 	for _, nextId := range indexes[1:] {
@@ -17,7 +18,7 @@ func MergeAll(arena *classify.Arena, matrix *RateMatrix, indexes []int) *classif
 	return templateArena
 }
 
-func initClone(arena *classify.Arena, matrix *RateMatrix, root int) *classify.Arena {
+func initClone(arena *arena.Arena, matrix *RateMatrix, root int) *arena.Arena {
 	res := arena.CloneBranch(root)
 	Init(res)
 	for i := range res.List {
@@ -33,7 +34,7 @@ type mergeItem struct {
 	TemplateIndex int
 }
 
-func mergeIntoTemplateAttrs(node1, node2 *classify.Node) []html.Attribute {
+func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
 	mergedAttrs := []html.Attribute{}
 	for _, attr1 := range node1.Attr {
 		for _, attr2 := range node2.Attr {
@@ -63,7 +64,7 @@ func mergeIntoTemplateAttrs(node1, node2 *classify.Node) []html.Attribute {
 	return mergedAttrs
 }
 
-func mergeIntoTemplate(mainArena, templateArena *classify.Arena, mainIdx, templateIdx int, matrix *RateMatrix) {
+func mergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateIdx int, matrix *RateMatrix) {
 	n1 := mainArena.Get(mainIdx)
 	templateNode := templateArena.Get(templateIdx)
 	n2 := mainArena.Get(templateNode.Ext.(*Additional).GroupIds[0])

@@ -1,8 +1,9 @@
 package cluster
 
 import (
-	"github.com/olesho/classify"
 	"sort"
+
+	"github.com/olesho/classify/arena"
 )
 
 type ClusterGroup struct {
@@ -13,7 +14,7 @@ type ClusterGroup struct {
 	Size            int
 }
 
-func groupClusters(a *classify.Arena, bags []Cluster) []*ClusterGroup {
+func groupClusters(a *arena.Arena, bags []Cluster) []*ClusterGroup {
 	// order IDs to find intersections further
 	for idx := range bags {
 		sort.Slice(bags[idx].Members, func(i, j int) bool {
@@ -59,7 +60,7 @@ func groupClusters(a *classify.Arena, bags []Cluster) []*ClusterGroup {
 	return groups
 }
 
-func checkNextIntersectionStrict(a *classify.Arena, groups []*ClusterGroup, cluster1 Cluster) []*ClusterGroup {
+func checkNextIntersectionStrict(a *arena.Arena, groups []*ClusterGroup, cluster1 Cluster) []*ClusterGroup {
 	for _, g := range groups {
 		if len(cluster1.Members) == len(g.Clusters[0].Members) {
 			for i2, cluster2 := range g.Clusters {
@@ -91,7 +92,7 @@ func checkNextIntersectionStrict(a *classify.Arena, groups []*ClusterGroup, clus
 	return groups
 }
 
-func belongs(a *classify.Arena, nodes, toNodes []*classify.Node) bool {
+func belongs(a *arena.Arena, nodes, toNodes []*arena.Node) bool {
 	for i := range nodes {
 		if !a.HasParent(nodes[i].Id, toNodes[i].Id) {
 			return false
@@ -100,7 +101,7 @@ func belongs(a *classify.Arena, nodes, toNodes []*classify.Node) bool {
 	return true
 }
 
-func intersects(a *classify.Arena, ns1, before []*classify.Node) bool {
+func intersects(a *arena.Arena, ns1, before []*arena.Node) bool {
 	for i := range ns1[:len(ns1)-1] {
 		// ns1[i].Id is between ns2[i].Id and ns2[i+1].Id
 		if !(ns1[i].Id > before[i].Id && ns1[i].Id < before[i+1].Id) {

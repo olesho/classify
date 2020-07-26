@@ -2,10 +2,11 @@ package cluster
 
 import (
 	"fmt"
-	"github.com/olesho/classify"
-	"golang.org/x/net/html"
 	"sort"
 	"strings"
+
+	"github.com/olesho/classify/arena"
+	"golang.org/x/net/html"
 )
 
 const MAX_TRIES = 4
@@ -39,16 +40,16 @@ func (f Field) String() string {
 }
 
 type Cluster struct {
-	Arena         *classify.Arena
-	TemplateArena *classify.Arena
-	Members       []*classify.Node
+	Arena         *arena.Arena
+	TemplateArena *arena.Arena
+	Members       []*arena.Node
 	Rate          float64
 	Volume        float64
 	Table         []Field
 }
 
 type idxCluster struct {
-	arena   *classify.Arena
+	arena   *arena.Arena
 	matrix  *RateMatrix
 	members []int
 	rate    float64
@@ -58,12 +59,12 @@ func (c *idxCluster) Volume() float64 {
 	return float64(len(c.members)) * c.rate
 }
 
-func (c *idxCluster) toCluster(arena *classify.Arena, matrix *RateMatrix) Cluster {
-	templateArena := MergeAll(arena, matrix, c.members)
+func (c *idxCluster) toCluster(a *arena.Arena, matrix *RateMatrix) Cluster {
+	templateArena := MergeAll(a, matrix, c.members)
 	result := Cluster{
 		Arena:         c.arena,
 		TemplateArena: templateArena,
-		Members:       make([]*classify.Node, len(c.members)),
+		Members:       make([]*arena.Node, len(c.members)),
 		Rate:          c.rate,
 	}
 
@@ -72,7 +73,7 @@ func (c *idxCluster) toCluster(arena *classify.Arena, matrix *RateMatrix) Cluste
 	// total volume derived from the least volume (smallest intersection)
 	//smallestVolume := GetVolume(arena.Get(c.members[0]))
 	for i, memberIdx := range c.members {
-		result.Members[i] = arena.Get(memberIdx)
+		result.Members[i] = a.Get(memberIdx)
 		//if GetVolume(arena.Get(memberIdx)) < smallestVolume {
 		//	smallestVolume = GetVolume(arena.Get(memberIdx))
 		//}
@@ -177,7 +178,7 @@ func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
 	return false
 }
 
-func Extract(arena *classify.Arena) *Matrix {
+func Extract(arena *arena.Arena) *Matrix {
 	Init(arena)
 	s := NewDefaultComparator(arena)
 	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
@@ -336,7 +337,7 @@ func (c *Cluster) WholesomeGroupTable() []Field {
 	return result
 }
 
-func extractFields(arena *classify.Arena, ids []int, fieldType int) *Field {
+func extractFields(arena *arena.Arena, ids []int, fieldType int) *Field {
 	values := &Field{}
 	values.Content = make([]string, len(ids))
 	for i, id := range ids {
@@ -351,7 +352,7 @@ func extractFields(arena *classify.Arena, ids []int, fieldType int) *Field {
 	return nil
 }
 
-func WholesomeInfo(n *classify.Node) (string, int) {
+func WholesomeInfo(n *arena.Node) (string, int) {
 	if n.Type == html.TextNode {
 		return strings.TrimSpace(n.Data), TextField
 	}

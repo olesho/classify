@@ -1,6 +1,6 @@
 package cluster
 
-import "github.com/olesho/classify"
+import "github.com/olesho/classify/arena"
 
 type Additional struct {
 	Volume   float64
@@ -15,22 +15,22 @@ func (a *Additional) AppendVolume(v float64) {
 	a.Volume += v
 }
 
-func GetVolume(n *classify.Node) float64 {
+func GetVolume(n *arena.Node) float64 {
 	return n.Ext.(*Additional).Volume
 }
 
-func Init(a *classify.Arena) {
+func Init(a *arena.Arena) {
 	initExt(a)
 	initVolume(a)
 }
 
-func initExt(a *classify.Arena) {
+func initExt(a *arena.Arena) {
 	for i := range a.List {
 		a.List[i].Ext = &Additional{}
 	}
 }
 
-func initVolume(a *classify.Arena) {
+func initVolume(a *arena.Arena) {
 	for _, el := range a.List {
 		el.Ext.(*Additional).AppendVolume(tokenVolume(el))
 	}
@@ -42,7 +42,7 @@ func initVolume(a *classify.Arena) {
 	}
 }
 
-func tokenVolume(n *classify.Node) float64 {
+func tokenVolume(n *arena.Node) float64 {
 	volume := .5         // has Type
 	if len(n.Data) > 1 { // has Data
 		volume += .5

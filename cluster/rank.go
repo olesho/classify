@@ -1,10 +1,10 @@
 package cluster
 
 import (
-	"github.com/olesho/classify"
+	"github.com/olesho/classify/arena"
 )
 
-type Row []*classify.Node
+type Row []*arena.Node
 
 type Matrix struct {
 	Matrix []Series
@@ -12,7 +12,7 @@ type Matrix struct {
 
 type Series struct {
 	Matrix []Row
-	Arena  *classify.Arena
+	Arena  *arena.Arena
 	Group  *ClusterGroup
 	//Volume float64
 	//WholesomeVolume float64
@@ -91,7 +91,7 @@ func transpose(group *ClusterGroup) []Row {
 	return newGroup
 }
 
-func (s *Series) Patterns() *classify.Template {
+func (s *Series) Patterns() *arena.Template {
 	groupSize := len(s.Matrix[0])
 	for _, row := range s.Matrix[1:] {
 		if groupSize != len(row) {
@@ -100,17 +100,17 @@ func (s *Series) Patterns() *classify.Template {
 		}
 	}
 
-	var templates = make([]classify.Template, len(s.Matrix))
+	var templates = make([]arena.Template, len(s.Matrix))
 	for templIdx, row := range s.Matrix {
-		templates[templIdx] = classify.Template{Chains: make([]classify.Chain, len(row))}
+		templates[templIdx] = arena.Template{Chains: make([]arena.Chain, len(row))}
 		for i, n := range row {
 			templates[templIdx].Chains[i] = s.Arena.Chain(n.Id, 0)
 		}
 	}
 
-	template := classify.MergeTemplates(&templates[0], &templates[1])
+	template := arena.MergeTemplates(&templates[0], &templates[1])
 	for _, next := range templates[2:] {
-		template = classify.MergeTemplates(template, &next)
+		template = arena.MergeTemplates(template, &next)
 	}
 	return template
 }

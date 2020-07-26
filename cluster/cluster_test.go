@@ -3,11 +3,12 @@ package cluster
 import (
 	"bufio"
 	"fmt"
-	"github.com/olesho/classify"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/html"
 	"os"
 	"testing"
+
+	"github.com/olesho/classify/arena"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/html"
 )
 
 //func TestRenderLabels(t *testing.T) {
@@ -18,7 +19,7 @@ import (
 //	n, err := html.Parse(reader)
 //	a.NoError(err)
 //
-//	arena := classify.NewArena(*n)
+//	arena := arena.NewArena(*n)
 //	for i, el := range arena.List {
 //		arena.List[i].Attr = append(el.Attr, html.Attribute{
 //			Key: "arid",
@@ -46,7 +47,7 @@ func TestYcomb(t *testing.T) {
 	n, err := html.Parse(reader)
 	a.NoError(err)
 
-	arena := classify.NewArena(*n)
+	arena := arena.NewArena(*n)
 	series := Extract(arena).Matrix[0]
 
 	for _, c := range series.Group.Clusters {

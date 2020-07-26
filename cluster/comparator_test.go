@@ -2,11 +2,12 @@ package cluster
 
 import (
 	"fmt"
-	"github.com/olesho/classify"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/html"
 	"strings"
 	"testing"
+
+	"github.com/olesho/classify/arena"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/html"
 )
 
 func TestComparator(t *testing.T) {
@@ -91,7 +92,7 @@ func TestComparator(t *testing.T) {
 	n, err := html.Parse(reader)
 	a.NoError(err)
 
-	arena := classify.NewArena(*n)
+	arena := arena.NewArena(*n)
 	Init(arena)
 	c := NewDefaultComparator(arena)
 
