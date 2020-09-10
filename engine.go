@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
+	"github.com/nathan-fiscaletti/consolesize-go"
 	"github.com/olesho/classify/arena"
 	"github.com/olesho/classify/cluster"
 	"os"
 	"os/exec"
-	"strconv"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 var defaultArena *arena.Arena
@@ -28,29 +30,24 @@ func FuncClear(command string) {
 	}
 }
 
-func renderOutput(groupIdx int, render func(itemID int) string) {
-	w := prompt.NewStdoutWriter()
-	rowsCnt := 0
-	for _, series := range matrix.Matrix[groupIdx].Matrix {
-		itemCnt := 0
-		for _, item := range series {
-			w.SetColor(prompt.DarkGray, prompt.White, true)
-			w.WriteStr("\n"+render(item.Id)+"\n")
-			w.Flush()
-
-			w.SetColor(prompt.Red, prompt.DefaultColor, true)
-			w.WriteStr("\n")
-			w.Flush()
-			//w.WriteStr("--------------------------------------------------------------------")
-			itemCnt++
+func renderOutput(groupIdx int, render func(itemID int) []string) {
+	cols, _ := consolesize.GetConsoleSize()
+	bw := NewBlockWriter(cols+1, 1, 1)
+	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix.Matrix[groupIdx].Matrix)))
+	for i, series := range matrix.Matrix[groupIdx].Matrix {
+		bw.Open(prompt.Brown, prompt.White, fmt.Sprintf("Group %v", i+1))
+		for itemIndex, item := range series {
+			subItems := render(item.Id)
+			bw.Open(prompt.Cyan, prompt.White, fmt.Sprintf("Item %v", itemIndex+1))
+			for _, subItem := range subItems {
+				subItem = strings.ReplaceAll(subItem, "\n", " ")
+				bw.WriteText(prompt.Black, prompt.White, false, subItem)
+			}
+			bw.Close()
 		}
-		w.SetColor(prompt.Red, prompt.DefaultColor, true)
-		w.WriteStr(fmt.Sprintf("\n        %v items total\n", itemCnt))
-		w.WriteStr("====================================================================\n")
-		w.Flush()
-		rowsCnt++
+		bw.Close()
 	}
-	fmt.Printf("        %v rows total\n", rowsCnt)
+	bw.Close()
 	return
 }
 
@@ -66,20 +63,20 @@ func FuncShow(command string) {
 			if idx < len(matrix.Matrix) {
 				switch dataType {
 				case "elem":
-					renderOutput(idx, func(itemID int) string {
-						return defaultArena.StringifyNode(itemID)
+					renderOutput(idx, func(itemID int) []string {
+						return []string{defaultArena.StringifyNode(itemID)}
 					})
 				case "path":
-					renderOutput(idx, func(itemID int) string {
-						return defaultArena.Chain(itemID, 0).XPath()
+					renderOutput(idx, func(itemID int) []string {
+						return []string{defaultArena.Chain(itemID, 0).XPath()}
 					})
 				case "html":
-					renderOutput(idx, func(itemID int) string {
+					renderOutput(idx, func(itemID int) []string {
 						data, _ := defaultArena.RenderString(itemID)
-						return data
+						return []string{data}
 					})
 				case "text":
-					renderOutput(idx, func(itemID int) string {
+					renderOutput(idx, func(itemID int) []string {
 						return defaultArena.StringifyInformation(itemID)
 					})
 				}

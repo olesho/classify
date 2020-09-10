@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"github.com/olesho/classify/arena"
+	"strings"
 )
 
 type Row []*arena.Node
@@ -20,9 +21,9 @@ type Series struct {
 }
 
 func (m *Series) isFieldUniform(index int) bool {
-	val := m.Arena.StringifyInformation(m.Matrix[0][index].Id)
+	val := strings.Join(m.Arena.StringifyInformation(m.Matrix[0][index].Id), " ")
 	for _, row := range m.Matrix {
-		if m.Arena.StringifyInformation(row[index].Id) != val {
+		if strings.Join(m.Arena.StringifyInformation(row[index].Id), " ") != val {
 			return false
 		}
 	}
