@@ -1,0 +1,92 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"github.com/olesho/classify/arena"
+	"github.com/olesho/classify/cluster"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/charset"
+	"io"
+	"log"
+	"net/http"
+	"regexp"
+	"strings"
+
+	"golang.org/x/text/encoding/htmlindex"
+)
+
+var httpRule = regexp.MustCompile(`http\s+?(.+)`)
+var charsetRule = regexp.MustCompile(`charset=([^()<>@,;:\"/[\]?.=\s]*)`)
+
+func detectContentCharset(body io.Reader) string {
+	r := bufio.NewReader(body)
+	if data, err := r.Peek(1024); err == nil {
+		if _, name, ok := charset.DetermineEncoding(data, ""); ok {
+			return name
+		}
+	}
+	return "utf-8"
+}
+
+func decode(body io.Reader, charset string) (io.Reader, error) {
+	if charset == "" {
+		charset = detectContentCharset(body)
+	}
+	e, err := htmlindex.Get(charset)
+	if err != nil {
+		return nil, err
+	}
+
+	if name, _ := htmlindex.Name(e); name != "utf-8" {
+		body = e.NewDecoder().Reader(body)
+	}
+
+	return body, nil
+}
+
+func getContentCharset(r *http.Response) string {
+	contentType := r.Header.Get("content-type")
+	s := charsetRule.FindAllStringSubmatch(contentType, 1)
+	if len(s) > 0 {
+		if len(s[0]) > 1 {
+			return s[0][1]
+		}
+	}
+	return ""
+}
+
+func FuncHttp (command string) {
+	parts := httpRule.FindStringSubmatch(command)
+	if len(parts) > 1 {
+		u := parts[1]
+		if !(strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
+			u = "https://" + u
+		}
+
+		req, err := http.NewRequest("GET", u, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		r, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		reader, err := decode(r.Body, getContentCharset(r))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		n, err := html.Parse(reader)
+		defaultArena = arena.NewArena()
+		defaultArena.Load(*n)
+		matrix = cluster.Extract(defaultArena)
+
+		fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
+	}
+}

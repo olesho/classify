@@ -68,6 +68,7 @@ func (bw *BlockWriter) EmptyTitleLn(bgColor, textColor prompt.Color, size int, t
 
 	bw.w.SetColor(textColor, bgColor,true)
 	bw.w.WriteStr(ind)
+
 	bw.w.Flush()
 	bw.w.SetColor(bgColor, bgColor, true)
 	bw.w.WriteStr(ln)

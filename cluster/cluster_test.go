@@ -1,9 +1,8 @@
 package cluster
 
 import (
-	"bufio"
 	"fmt"
-	"os"
+	"strings"
 	"testing"
 
 	"github.com/olesho/classify/arena"
@@ -34,20 +33,53 @@ import (
 func TestYcomb(t *testing.T) {
 	a := assert.New(t)
 
-	//f, _ := os.Open("examples/fb.html")
-	f, _ := os.Open("examples/ycomb.html")
-	//f, _ := os.Open("examples/hackernoon.html")
-	//f, _ := os.Open("examples/pravda.html")
-	//f, _ := os.Open("examples/bbc.html")
-	//f, _ := os.Open("examples/cnn.html")
-	//f, _ := os.Open("examples/test1.html")
-	//f, _ := os.Open("examples/test2.html")
-	defer f.Close()
-	reader := bufio.NewReader(f)
-	n, err := html.Parse(reader)
+	n1, err := html.Parse(strings.NewReader(`
+<html>
+	<body>
+		<div>
+			<p>Hello 1</p>
+		</div>
+		<div>
+			<p>Hello 2</p>
+		</div>
+		<div>
+			<p>Hello 3</p>
+		</div>
+	</body>
+</html>
+`))
 	a.NoError(err)
 
-	arena := arena.NewArena(*n)
+	n2, err := html.Parse(strings.NewReader(`
+<html>
+	<body>
+		<div>
+			<p>Hello 4</p>
+		</div>
+		<div>
+			<p>Hello 5</p>
+		</div>
+		<div>
+			<p>Hello 6</p>
+		</div>
+	</body>
+</html>
+`))
+	a.NoError(err)
+
+	arena := arena.NewArena()
+	arena.Append(*n1)
+	arena.Append(*n2)
+
+	//s, _ := arena.RenderString(0)
+	//fmt.Println(s)
+
+	for i, item := range arena.List {
+		if item.Data == "div" {
+			fmt.Println(i)
+		}
+	}
+
 	series := Extract(arena).Matrix[0]
 
 	for _, c := range series.Group.Clusters {
@@ -65,6 +97,7 @@ func TestYcomb(t *testing.T) {
 	}
 
 	template := series.Nonuniform().Patterns()
+	fmt.Printf("total chains: %v\n", len(template.Chains))
 	for _, r := range template.Chains {
 		fmt.Println(r.XPath())
 	}

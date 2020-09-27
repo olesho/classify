@@ -92,7 +92,8 @@ func TestComparator(t *testing.T) {
 	n, err := html.Parse(reader)
 	a.NoError(err)
 
-	arena := arena.NewArena(*n)
+	arena := arena.NewArena()
+	arena.Load(*n)
 	Init(arena)
 	c := NewDefaultComparator(arena)
 

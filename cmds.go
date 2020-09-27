@@ -8,7 +8,6 @@ import (
 	"github.com/olesho/classify/cluster"
 	"golang.org/x/net/html"
 	"log"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -23,7 +22,6 @@ type Cmd struct {
 var qRule = regexp.MustCompile(`q`)
 var exitRule = regexp.MustCompile(`exit`)
 var fileRule = regexp.MustCompile(`file\s+?(.+)`)
-var httpRule = regexp.MustCompile(`http\s+?(.+)`)
 var helpRule = regexp.MustCompile(`\?`)
 var showRule = regexp.MustCompile(`show\s+(?:([a-z]+)?)\s+?([0-9]+)$`)
 var clearRule = regexp.MustCompile(`clear`)
@@ -63,27 +61,7 @@ var commands = []Cmd{
 	},
 	{
 		Regexp: httpRule,
-		Func: func(command string) {
-			parts := httpRule.FindStringSubmatch(command)
-			if len(parts) > 1 {
-				u := parts[1]
-				if !(strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
-					u = "https://" + u
-				}
-				r, err := http.Get(u)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				reader := bufio.NewReader(r.Body)
-				n, err := html.Parse(reader)
-				defaultArena = arena.NewArena()
-				defaultArena.Load(*n)
-				matrix = cluster.Extract(defaultArena)
-
-				fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
-			}
-		},
+		Func: FuncHttp,
 		Suggest: prompt.Suggest{Text: "http ", Description: `http "url" - load web page from URL`},
 	},
 	{
