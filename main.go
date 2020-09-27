@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/c-bata/go-prompt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/c-bata/go-prompt"
+	"github.com/olesho/classify/arena"
 )
 
 var history []string
@@ -21,6 +23,7 @@ func main() {
 		log.Println(err)
 	}
 	history = strings.Split(string(bts), "\n")
+	defaultArena = arena.NewArena()
 	for {
 		input := prompt.Input("> ", completer, prompt.OptionHistory(history))
 		fmt.Println(input)

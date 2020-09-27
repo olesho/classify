@@ -2,21 +2,21 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"github.com/olesho/classify/arena"
-	"github.com/olesho/classify/cluster"
-	"golang.org/x/net/html"
-	"golang.org/x/net/html/charset"
 	"io"
 	"log"
 	"net/http"
 	"regexp"
 	"strings"
 
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/charset"
+
 	"golang.org/x/text/encoding/htmlindex"
 )
 
-var httpRule = regexp.MustCompile(`http\s+?(.+)`)
+var webRule = regexp.MustCompile(`^web\s+?(.+)`)
+var wRule = regexp.MustCompile(`^w\s+?(.+)`)
+
 var charsetRule = regexp.MustCompile(`charset=([^()<>@,;:\"/[\]?.=\s]*)`)
 
 func detectContentCharset(body io.Reader) string {
@@ -56,8 +56,8 @@ func getContentCharset(r *http.Response) string {
 	return ""
 }
 
-func FuncHttp (command string) {
-	parts := httpRule.FindStringSubmatch(command)
+func funcWeb(command string) {
+	parts := webRule.FindStringSubmatch(command)
 	if len(parts) > 1 {
 		u := parts[1]
 		if !(strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
@@ -83,10 +83,14 @@ func FuncHttp (command string) {
 		}
 
 		n, err := html.Parse(reader)
-		defaultArena = arena.NewArena()
-		defaultArena.Load(*n)
-		matrix = cluster.Extract(defaultArena)
-
-		fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if defaultArena != nil {
+			defaultArena.Append(*n)
+		} else {
+			log.Println("empty context")
+		}
 	}
 }

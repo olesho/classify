@@ -8,21 +8,22 @@ import (
 	"golang.org/x/net/html"
 )
 
+// MergeAll merges all nodes with indexes into single template producing new arena
 func MergeAll(arena *arena.Arena, matrix *RateMatrix, indexes []int) *arena.Arena {
-	rootId := indexes[0]
-	templateArena := initClone(arena, matrix, rootId)
-	for _, nextId := range indexes[1:] {
-		templateArena.List[0].Ext.(*Additional).AppendGroupId(nextId)
-		mergeIntoTemplate(arena, templateArena, nextId, 0, matrix)
+	rootID := indexes[0]
+	templateArena := initClone(arena, rootID)
+	for _, nextID := range indexes[1:] {
+		templateArena.List[1].Ext.(*Additional).AppendGroupId(nextID)
+		mergeIntoTemplate(arena, templateArena, nextID, 1, matrix)
 	}
 	return templateArena
 }
 
-func initClone(arena *arena.Arena, matrix *RateMatrix, root int) *arena.Arena {
+func initClone(arena *arena.Arena, root int) *arena.Arena {
 	res := arena.CloneBranch(root)
 	Init(res)
-	for i := range res.List {
-		res.List[i].Ext.(*Additional).AppendGroupId(i + root)
+	for i := range res.List[1:] {
+		res.List[1:][i].Ext.(*Additional).AppendGroupId(i + root)
 	}
 	return res
 }
@@ -81,45 +82,48 @@ func mergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateI
 
 	// merge children
 	size1, size2 := len(n1.Children), len(n2.Children)
-	rating := make([]mergeItem, size1*size2)
-	for i1, idx1 := range n1.Children {
-		for i2, idx2 := range n2.Children {
-			idx := (i1+1)*(i2+1) - 1
-			rating[idx].Similarity = matrix.Cmp(idx1, idx2)
-			rating[idx].Index1 = i1
-			rating[idx].Index2 = i2
-			rating[idx].TemplateIndex = templateNode.Children[i2]
-		}
-	}
-
-	sort.Slice(rating, func(i, j int) bool {
-		return rating[i].Similarity > rating[j].Similarity
-	})
-
-	flags1 := make([]bool, size1)
-	flags2 := make([]bool, size2)
-	count := 0
-	smallerSize := 0
-	if size1 < size2 {
-		smallerSize = size1
-	} else {
-		smallerSize = size2
-	}
-
-	for _, rate := range rating { // TODO add exit if rate.Similariry == 0 !!!
-		if !flags1[rate.Index1] && !flags2[rate.Index2] {
-			if rate.Similarity == 0 {
-				break
+	ratingMatrixSize := size1 * size2
+	if ratingMatrixSize > 0 {
+		rating := make([]mergeItem, ratingMatrixSize)
+		for i1, idx1 := range n1.Children {
+			for i2, idx2 := range n2.Children {
+				idx := (i1+1)*(i2+1) - 1
+				rating[idx].Similarity = matrix.Cmp(idx1, idx2)
+				rating[idx].Index1 = i1
+				rating[idx].Index2 = i2
+				rating[idx].TemplateIndex = templateNode.Children[i2]
 			}
-			templateChildNode := templateArena.Get(templateNode.Children[rate.Index2])
-			idx := n1.Children[rate.Index1]
-			templateChildNode.Ext.(*Additional).AppendGroupId(idx)
-			mergeIntoTemplate(mainArena, templateArena, idx, rate.TemplateIndex, matrix)
-			flags1[rate.Index1] = true
-			flags2[rate.Index2] = true
-			count++
-			if count == smallerSize {
-				break
+		}
+
+		sort.Slice(rating, func(i, j int) bool {
+			return rating[i].Similarity > rating[j].Similarity
+		})
+
+		flags1 := make([]bool, size1)
+		flags2 := make([]bool, size2)
+		count := 0
+		smallerSize := 0
+		if size1 < size2 {
+			smallerSize = size1
+		} else {
+			smallerSize = size2
+		}
+
+		for _, rate := range rating { // TODO add exit if rate.Similariry == 0 !!!
+			if !flags1[rate.Index1] && !flags2[rate.Index2] {
+				if rate.Similarity == 0 {
+					break
+				}
+				templateChildNode := templateArena.Get(templateNode.Children[rate.Index2])
+				idx := n1.Children[rate.Index1]
+				templateChildNode.Ext.(*Additional).AppendGroupId(idx)
+				mergeIntoTemplate(mainArena, templateArena, idx, rate.TemplateIndex, matrix)
+				flags1[rate.Index1] = true
+				flags2[rate.Index2] = true
+				count++
+				if count == smallerSize {
+					break
+				}
 			}
 		}
 	}

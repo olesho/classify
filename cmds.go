@@ -3,38 +3,39 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/c-bata/go-prompt"
-	"github.com/olesho/classify/arena"
-	"github.com/olesho/classify/cluster"
-	"golang.org/x/net/html"
 	"log"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/c-bata/go-prompt"
+	"golang.org/x/net/html"
 )
 
 type Cmd struct {
-	Regexp *regexp.Regexp
-	Func func(string)
+	Regexp  *regexp.Regexp
+	Func    func(string)
 	Suggest prompt.Suggest
 }
 
-var qRule = regexp.MustCompile(`q`)
-var exitRule = regexp.MustCompile(`exit`)
-var fileRule = regexp.MustCompile(`file\s+?(.+)`)
+var qRule = regexp.MustCompile(`^q`)
+var exitRule = regexp.MustCompile(`^exit`)
+var fileRule = regexp.MustCompile(`^file\s+?(.+)`)
 var helpRule = regexp.MustCompile(`\?`)
-var showRule = regexp.MustCompile(`show\s+(?:([a-z]+)?)\s+?([0-9]+)$`)
-var clearRule = regexp.MustCompile(`clear`)
+var showRule = regexp.MustCompile(`^show\s+(?:([a-z]+)?)\s+?([0-9]+)$`)
+var clearRule = regexp.MustCompile(`^clear`)
+var resetRule = regexp.MustCompile(`^reset`)
+var rRule = regexp.MustCompile(`^r`)
 
 var commands = []Cmd{
 	{
-		Regexp: qRule,
-		Func: FuncExit,
+		Regexp:  qRule,
+		Func:    FuncExit,
 		Suggest: prompt.Suggest{Text: "q", Description: "exit terminal"},
 	},
 	{
-		Regexp: exitRule,
-		Func: FuncExit,
+		Regexp:  exitRule,
+		Func:    FuncExit,
 		Suggest: prompt.Suggest{Text: "exit", Description: "exit terminal"},
 	},
 	{
@@ -50,19 +51,28 @@ var commands = []Cmd{
 				defer f.Close()
 				reader := bufio.NewReader(f)
 				n, err := html.Parse(reader)
-				defaultArena = arena.NewArena()
-				defaultArena.Load(*n)
-				matrix = cluster.Extract(defaultArena)
-
-				fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				if defaultArena != nil {
+					defaultArena.Append(*n)
+				} else {
+					log.Println("no context")
+				}
 			}
 		},
 		Suggest: prompt.Suggest{Text: "file ", Description: `file "file name" - load file`},
 	},
 	{
-		Regexp: httpRule,
-		Func: FuncHttp,
-		Suggest: prompt.Suggest{Text: "http ", Description: `http "url" - load web page from URL`},
+		Regexp:  webRule,
+		Func:    funcWeb,
+		Suggest: prompt.Suggest{Text: "web ", Description: `web "url" - load web page from URL`},
+	},
+	{
+		Regexp:  wRule,
+		Func:    funcWeb,
+		Suggest: prompt.Suggest{Text: "w ", Description: `w "url" - load web page from URL`},
 	},
 	{
 		Regexp: helpRule,
@@ -77,29 +87,39 @@ var commands = []Cmd{
 		Suggest: prompt.Suggest{Text: "help", Description: "help"},
 	},
 	{
-		Regexp: showRule,
-		Func: FuncShow,
+		Regexp:  showRule,
+		Func:    funcShow,
 		Suggest: prompt.Suggest{Text: "show elem", Description: "show elem [group_index] - shows content for element with [group_index] from current list"},
 	},
 	{
-		Regexp: showRule,
-		Func: FuncShow,
+		Regexp:  showRule,
+		Func:    funcShow,
 		Suggest: prompt.Suggest{Text: "show path", Description: "show path [group_index] - shows path for element with [group_index] from current list"},
 	},
 	{
-		Regexp: showRule,
-		Func: FuncShow,
+		Regexp:  showRule,
+		Func:    funcShow,
 		Suggest: prompt.Suggest{Text: "show html", Description: "show html [group_index] - shows content for element with [group_index] from current list"},
 	},
 	{
-		Regexp: showRule,
-		Func: FuncShow,
+		Regexp:  showRule,
+		Func:    funcShow,
 		Suggest: prompt.Suggest{Text: "show text", Description: "show text [group_index] - shows content for element group_index [index] from current list"},
 	},
 	{
-		Regexp: clearRule,
-		Func: FuncClear,
+		Regexp:  clearRule,
+		Func:    funcClear,
 		Suggest: prompt.Suggest{Text: "clear", Description: "clear output"},
+	},
+	{
+		Regexp:  resetRule,
+		Func:    funcReset,
+		Suggest: prompt.Suggest{Text: "reset", Description: "reset context"},
+	},
+	{
+		Regexp:  rRule,
+		Func:    funcReset,
+		Suggest: prompt.Suggest{Text: "r", Description: "reset context"},
 	},
 }
 

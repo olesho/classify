@@ -2,21 +2,27 @@ package main
 
 import (
 	"fmt"
-	"github.com/c-bata/go-prompt"
-	"github.com/nathan-fiscaletti/consolesize-go"
-	"github.com/olesho/classify/arena"
-	"github.com/olesho/classify/cluster"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/c-bata/go-prompt"
+	"github.com/nathan-fiscaletti/consolesize-go"
+	"github.com/olesho/classify/arena"
+	"github.com/olesho/classify/cluster"
 )
 
 var defaultArena *arena.Arena
 var matrix *cluster.Matrix
 
-func FuncClear(command string) {
+func funcReset(command string) {
+	matrix = nil
+	defaultArena = arena.NewArena()
+}
+
+func funcClear(command string) {
 	if runtime.GOOS == "linux" {
 		cmd := exec.Command("clear") //Linux example, its tested
 		cmd.Stdout = os.Stdout
@@ -34,7 +40,7 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 	cols, _ := consolesize.GetConsoleSize()
 	bw := NewBlockWriter(cols+1, 1, 1)
 	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix.Matrix[groupIdx].Matrix)))
-	for i, series := range matrix.Matrix[groupIdx].Matrix {
+	for i, series := range matrix.Matrix[groupIdx].Nonuniform().Matrix {
 		bw.Open(prompt.Brown, prompt.White, fmt.Sprintf("Group %v", i+1))
 		for itemIndex, item := range series {
 			subItems := render(item.Id)
@@ -51,7 +57,11 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 	return
 }
 
-func FuncShow(command string) {
+func funcShow(command string) {
+	if matrix == nil {
+		matrix = cluster.Extract(defaultArena)
+		fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
+	}
 	if matrix != nil {
 		parts := showRule.FindStringSubmatch(command)
 		dataType := "path"

@@ -1,7 +1,9 @@
 package cluster
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -10,25 +12,23 @@ import (
 	"golang.org/x/net/html"
 )
 
-//func TestRenderLabels(t *testing.T) {
-//	a := assert.New(t)
-//	f, _ := os.Open("examples/bbc.html")
-//	defer f.Close()
-//	reader := bufio.NewReader(f)
-//	n, err := html.Parse(reader)
-//	a.NoError(err)
-//
-//	arena := arena.NewArena(*n)
-//	for i, el := range arena.List {
-//		arena.List[i].Attr = append(el.Attr, html.Attribute{
-//			Key: "arid",
-//			Val: fmt.Sprint(el.Id),
-//		})
-//	}
-//	text, _ := arena.RenderString(0)
-//
-//	fmt.Println(text)
-//}
+func TestRenderLabels(t *testing.T) {
+	a := assert.New(t)
+	f, err := os.Open("../bbc.html")
+	a.NoError(err)
+	defer f.Close()
+	reader := bufio.NewReader(f)
+	n, err := html.Parse(reader)
+	a.NoError(err)
+
+	arena := arena.NewArena()
+	arena.Append(*n)
+	series := Extract(arena).Matrix[0]
+	fmt.Println(series.Uniform())
+	// for _, c := series.Uniform() {
+	// 	fmt.Println(c.WholesomeInfo())
+	// }
+}
 
 func TestYcomb(t *testing.T) {
 	a := assert.New(t)
