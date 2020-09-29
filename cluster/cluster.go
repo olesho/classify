@@ -178,15 +178,24 @@ func (c *idxCluster) tryAdd(candidateRate float64, candidateIndex int) bool {
 	return false
 }
 
+// Extract gets all clusters from given arena tree
 func Extract(arena *arena.Arena) *Matrix {
 	Init(arena)
 	s := NewDefaultComparator(arena)
+
+	// trace
+	// fmt.Printf("arena length: %v\n", len(arena.List))
+
 	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
 		if j <= i {
 			return 0
 		}
 		return s.Cmp(s.arena.List[i], s.arena.List[j])
 	})
+
+	// trace
+	// fmt.Println("comparison matrix created:", time.Since(matrix.startedAt).Seconds(), "seconds")
+	// matrix.startedAt = time.Now()
 
 	clusters := make([]Cluster, 0)
 	for {
@@ -222,6 +231,11 @@ func Extract(arena *arena.Arena) *Matrix {
 
 		cluster := icluster.toCluster(arena, matrix)
 		clusters = append(clusters, cluster)
+
+		// trace
+		// fmt.Println("cluster added", time.Since(matrix.startedAt).Seconds(), "seconds")
+		// matrix.startedAt = time.Now()
+		// fmt.Println("excluded:", matrix.excludedCount)
 	}
 
 	// this one is optional

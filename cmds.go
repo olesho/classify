@@ -75,6 +75,11 @@ var commands = []Cmd{
 		Suggest: prompt.Suggest{Text: "w ", Description: `w "url" - load web page from URL`},
 	},
 	{
+		Regexp:  chromeRule,
+		Func:    funcChrome,
+		Suggest: prompt.Suggest{Text: "chrome ", Description: `chrome "url" - load webpage from URL using Headless Chrome engine`},
+	},
+	{
 		Regexp: helpRule,
 		Func: func(command string) {
 			fmt.Println(`

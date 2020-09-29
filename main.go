@@ -26,7 +26,6 @@ func main() {
 	defaultArena = arena.NewArena()
 	for {
 		input := prompt.Input("> ", completer, prompt.OptionHistory(history))
-		fmt.Println(input)
 		history = append(history, input)
 		ok := false
 		for _, r := range commands {

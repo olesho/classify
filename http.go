@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -16,6 +18,7 @@ import (
 
 var webRule = regexp.MustCompile(`^web\s+?(.+)`)
 var wRule = regexp.MustCompile(`^w\s+?(.+)`)
+var chromeRule = regexp.MustCompile(`^chrome\s+?(.+)`)
 
 var charsetRule = regexp.MustCompile(`charset=([^()<>@,;:\"/[\]?.=\s]*)`)
 
@@ -83,6 +86,29 @@ func funcWeb(command string) {
 		}
 
 		n, err := html.Parse(reader)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if defaultArena != nil {
+			defaultArena.Append(*n)
+		} else {
+			log.Println("empty context")
+		}
+	}
+}
+
+func funcChrome(command string) {
+	parts := chromeRule.FindStringSubmatch(command)
+	if len(parts) > 1 {
+		u := parts[1]
+		cmd := exec.Command(`google-chrome`, `--headless`, `--dump-dom`, u)
+		data, err := cmd.Output()
+		if err != nil {
+			log.Println(err)
+		}
+
+		n, err := html.Parse(bytes.NewBuffer(data))
 		if err != nil {
 			log.Println(err)
 			return
