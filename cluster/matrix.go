@@ -2,10 +2,18 @@ package cluster
 
 import "time"
 
+// ComparableList is a list of results of node comparations
+type ComparableList interface {
+	Cmp(i, j int) float64
+	Exclude(index int)
+	IsExcluded(index int) bool
+	Candidates(idx int) (startingIndex int, values []float64)
+}
+
+// RateMatrix is most straghtforward ComparableList implementation
 type RateMatrix struct {
-	Rows        []RateRow
-	RowExcluded []bool
-	ColExcluded []bool
+	Rows     []RateRow
+	Excluded []bool
 
 	excludedCount int
 	startedAt     time.Time
@@ -19,8 +27,7 @@ func NewRateMatrix(size1, size2 int, cmp func(i, j int) float64) *RateMatrix {
 		startedAt:     time.Now(),
 	}
 	cells := make([]RateRow, size1)
-	offRows := make([]bool, size1)
-	offCols := make([]bool, size2)
+	off := make([]bool, size1)
 	for i := range cells {
 		cells[i] = make([]float64, size2)
 		for j := range cells[i] {
@@ -29,8 +36,7 @@ func NewRateMatrix(size1, size2 int, cmp func(i, j int) float64) *RateMatrix {
 		}
 	}
 	rm.Rows = cells
-	rm.RowExcluded = offRows
-	rm.ColExcluded = offCols
+	rm.Excluded = off
 	return rm
 }
 
@@ -46,9 +52,9 @@ func (m *RateMatrix) Max() (max float64, maxi, maxj int) {
 	maxi = -1
 	maxj = -1
 	for i, row := range m.Rows {
-		if !m.RowExcluded[i] {
+		if !m.IsExcluded(i) {
 			for j, cell := range row {
-				if !m.ColExcluded[j] {
+				if !m.IsExcluded(j) {
 					if cell > max {
 						max = cell
 						maxi = i
@@ -61,11 +67,15 @@ func (m *RateMatrix) Max() (max float64, maxi, maxj int) {
 	return
 }
 
-func (m *RateMatrix) ExcludeRows(index int) {
-	m.RowExcluded[index] = true
+func (m *RateMatrix) Exclude(index int) {
+	m.Excluded[index] = true
 	m.excludedCount++
 }
 
-func (m *RateMatrix) ExcludeCols(index int) {
-	m.ColExcluded[index] = true
+func (m *RateMatrix) IsExcluded(index int) bool {
+	return m.Excluded[index]
+}
+
+func (m *RateMatrix) Candidates(idx int) (startingIndex int, values []float64) {
+	return 0, m.Rows[idx]
 }

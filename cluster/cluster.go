@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/olesho/classify/arena"
 	"golang.org/x/net/html"
@@ -50,7 +51,7 @@ type Cluster struct {
 
 type idxCluster struct {
 	arena   *arena.Arena
-	matrix  *RateMatrix
+	matrix  ComparableList
 	members []int
 	rate    float64
 }
@@ -59,7 +60,7 @@ func (c *idxCluster) Volume() float64 {
 	return float64(len(c.members)) * c.rate
 }
 
-func (c *idxCluster) toCluster(a *arena.Arena, matrix *RateMatrix) Cluster {
+func (c *idxCluster) toCluster(a *arena.Arena, matrix ComparableList) Cluster {
 	templateArena := MergeAll(a, matrix, c.members)
 	result := Cluster{
 		Arena:         c.arena,
@@ -118,14 +119,15 @@ func (c *idxCluster) nextCandidate(excluded ...int) (float64, int) {
 	maxCandidateRate := .0
 	maxCandidateIdx := -1
 	for _, memberIdx := range c.members {
-		for candidateIndex, val := range c.matrix.Rows[memberIdx] {
+		candidateIndex, vals := c.matrix.Candidates(memberIdx)
+		for _, val := range vals {
 
 			// since only half table filled
 			if candidateIndex < memberIdx {
 				val = c.matrix.Cmp(candidateIndex, memberIdx)
 			}
 
-			if val > 0 && !c.matrix.RowExcluded[candidateIndex] && !isin(candidateIndex, excluded) {
+			if val > 0 && !c.matrix.IsExcluded(candidateIndex) && !isin(candidateIndex, excluded) {
 				if !c.hasIndex(candidateIndex) {
 					rate := c.rateCandidate(candidateIndex)
 					if rate > maxCandidateRate {
@@ -134,6 +136,7 @@ func (c *idxCluster) nextCandidate(excluded ...int) (float64, int) {
 					}
 				}
 			}
+			candidateIndex++
 		}
 	}
 	return maxCandidateRate, maxCandidateIdx
@@ -157,8 +160,7 @@ func (c *idxCluster) next() (*idxCluster, bool) {
 			excluded = append(excluded, idx)
 			if clone.Volume() > c.Volume() {
 				for _, excludeIdx := range excluded {
-					c.matrix.ExcludeCols(excludeIdx)
-					c.matrix.ExcludeRows(excludeIdx)
+					c.matrix.Exclude(excludeIdx)
 				}
 				return clone, true
 			}
@@ -184,7 +186,7 @@ func Extract(arena *arena.Arena) *Matrix {
 	s := NewDefaultComparator(arena)
 
 	// trace
-	// fmt.Printf("arena length: %v\n", len(arena.List))
+	fmt.Printf("arena length: %v\n", len(arena.List))
 
 	matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
 		if j <= i {
@@ -194,8 +196,8 @@ func Extract(arena *arena.Arena) *Matrix {
 	})
 
 	// trace
-	// fmt.Println("comparison matrix created:", time.Since(matrix.startedAt).Seconds(), "seconds")
-	// matrix.startedAt = time.Now()
+	fmt.Println("comparison matrix created:", time.Since(matrix.startedAt).Seconds(), "seconds")
+	matrix.startedAt = time.Now()
 
 	clusters := make([]Cluster, 0)
 	for {
@@ -203,10 +205,8 @@ func Extract(arena *arena.Arena) *Matrix {
 		if maxi < 0 {
 			break
 		}
-		matrix.ExcludeCols(maxi)
-		matrix.ExcludeRows(maxi)
-		matrix.ExcludeCols(maxj)
-		matrix.ExcludeRows(maxj)
+		matrix.Exclude(maxi)
+		matrix.Exclude(maxj)
 
 		icluster := idxCluster{
 			arena:   arena,
@@ -225,8 +225,7 @@ func Extract(arena *arena.Arena) *Matrix {
 			if !icluster.tryAdd(nextVal, nextIndex) {
 				break
 			}
-			matrix.ExcludeCols(nextIndex)
-			matrix.ExcludeRows(nextIndex)
+			matrix.Exclude(nextIndex)
 		}
 
 		cluster := icluster.toCluster(arena, matrix)
@@ -268,6 +267,104 @@ func Extract(arena *arena.Arena) *Matrix {
 	}
 	return rm
 
+}
+
+// ExtractOptimized gets all clusters from given arena tree
+func ExtractOptimized(arena *arena.Arena) *Matrix {
+	Init(arena)
+	s := NewDefaultComparator(arena)
+
+	// trace
+	startedAt := time.Now()
+	fmt.Printf("arena length: %v\n", len(arena.List))
+
+	matrix := NewOptimizedRateMatrixAsync(len(arena.List), len(arena.List), 4, func(i, j int) float64 {
+		if j <= i {
+			return 0
+		}
+		return s.Cmp(s.arena.List[i], s.arena.List[j])
+	})
+
+	// trace
+	fmt.Println("comparison matrix created:", time.Since(startedAt).Seconds(), "seconds")
+	startedAt = time.Now()
+
+	clusters := make([]Cluster, 0)
+	for {
+		// trace
+		// clusterStartedAt := time.Now()
+
+		maxRate, maxi, maxj := matrix.Max()
+		if maxi < 0 {
+			break
+		}
+		matrix.Exclude(maxi)
+		matrix.Exclude(maxj)
+
+		icluster := idxCluster{
+			arena:   arena,
+			matrix:  matrix,
+			members: []int{maxi, maxj},
+			rate:    maxRate,
+		}
+
+		// more complex and slow version
+		//for newCluster, ok := icluster.next(); ok; newCluster, ok = icluster.next() {
+		//	icluster = *newCluster
+		//}
+
+		// more simple and fast
+		for nextVal, nextIndex := icluster.nextCandidate(); nextIndex > -1; nextVal, nextIndex = icluster.nextCandidate() {
+			if !icluster.tryAdd(nextVal, nextIndex) {
+				break
+			}
+			matrix.Exclude(nextIndex)
+		}
+
+		cluster := icluster.toCluster(arena, matrix)
+		clusters = append(clusters, cluster)
+
+		// trace
+		// fmt.Println("cluster added:", time.Since(clusterStartedAt).Seconds(), "seconds")
+	}
+
+	// trace
+	fmt.Println("all clusters done:", time.Since(startedAt).Seconds(), "seconds")
+	startedAt = time.Now()
+
+	// this one is optional
+	sort.Slice(clusters, func(i, j int) bool {
+		return clusters[i].Rate > clusters[j].Rate
+	})
+
+	clusterGroups := groupClusters(s.arena, clusters)
+	sort.Slice(clusterGroups, func(i, j int) bool {
+		//return clusterGroups[i].Volume > clusterGroups[j].Volume
+
+		//if clusterGroups[i].WholesomeVolume == clusterGroups[j].WholesomeVolume {
+		//	return clusterGroups[i].Size > clusterGroups[j].Size
+		//}
+		//return  clusterGroups[i].WholesomeVolume > clusterGroups[j].WholesomeVolume
+
+		return clusterGroups[i].GroupVolume > clusterGroups[j].GroupVolume
+	})
+
+	// transpose
+	rm := &Matrix{
+		Matrix: make([]Series, len(clusterGroups)),
+	}
+	for i, g := range clusterGroups {
+		rm.Matrix[i] = Series{
+			Matrix: transpose(g),
+			Arena:  arena,
+			Group:  g,
+		}
+	}
+
+	// trace
+	fmt.Println("all clusters sorted:", time.Since(startedAt).Seconds(), "seconds")
+
+	return rm
 }
 
 type Cell struct {

@@ -9,7 +9,7 @@ import (
 )
 
 // MergeAll merges all nodes with indexes into single template producing new arena
-func MergeAll(arena *arena.Arena, matrix *RateMatrix, indexes []int) *arena.Arena {
+func MergeAll(arena *arena.Arena, matrix ComparableList, indexes []int) *arena.Arena {
 	rootID := indexes[0]
 	templateArena := initClone(arena, rootID)
 	for _, nextID := range indexes[1:] {
@@ -65,7 +65,7 @@ func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
 	return mergedAttrs
 }
 
-func mergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateIdx int, matrix *RateMatrix) {
+func mergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateIdx int, matrix ComparableList) {
 	n1 := mainArena.Get(mainIdx)
 	templateNode := templateArena.Get(templateIdx)
 	n2 := mainArena.Get(templateNode.Ext.(*Additional).GroupIds[0])
@@ -109,7 +109,7 @@ func mergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateI
 			smallerSize = size2
 		}
 
-		for _, rate := range rating { // TODO add exit if rate.Similariry == 0 !!!
+		for _, rate := range rating { // TODO add exit if rate.Similarity == 0 !!!
 			if !flags1[rate.Index1] && !flags2[rate.Index2] {
 				if rate.Similarity == 0 {
 					break

@@ -59,7 +59,8 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 
 func funcShow(command string) {
 	if matrix == nil {
-		matrix = cluster.Extract(defaultArena)
+		//matrix = cluster.Extract(defaultArena)
+		matrix = cluster.ExtractOptimized(defaultArena)
 		fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
 	}
 	if matrix != nil {
