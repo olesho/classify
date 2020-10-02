@@ -34,14 +34,14 @@ func NewOptimizedRateMatrixAsync(length, windowLength, numCPU int, cmp func(i, j
 			idx := int(atomic.AddInt32(index, 1))
 			for idx < len(rm.Values) {
 				currWindowLength := windowLength
-				if idx+windowLength > length {
+				if idx+windowLength >= length {
 					currWindowLength = length - idx
 				}
 
 				rm.Values[idx] = make([]float64, currWindowLength)
 				max := .0
-				for j := range rm.Values[idx : idx+currWindowLength] {
-					val := cmp(idx, idx+j)
+				for j := range rm.Values[idx : idx+currWindowLength-1] {
+					val := cmp(idx, idx+j+1)
 					if val > max {
 						max = val
 					}
@@ -67,14 +67,14 @@ func NewOptimizedRateMatrix(length, windowLength int, cmp func(i, j int) float64
 	}
 	for i := range rm.Values {
 		currWindowLength := windowLength
-		if i+windowLength > length {
+		if i+windowLength >= length {
 			currWindowLength = length - i
 		}
 
 		rm.Values[i] = make([]float64, currWindowLength)
 		max := .0
-		for j := range rm.Values[i : i+currWindowLength] {
-			val := cmp(i, i+j)
+		for j := range rm.Values[i : i+currWindowLength-1] {
+			val := cmp(i, i+j+1)
 			if val > max {
 				max = val
 			}
@@ -88,13 +88,16 @@ func NewOptimizedRateMatrix(length, windowLength int, cmp func(i, j int) float64
 // Cmp returns similarity by given indexes
 func (m *OptimizedMatrix) Cmp(idx1, idx2 int) float64 {
 	if idx1 < idx2 {
-		diff := idx2 - idx1
+		diff := idx2 - idx1 - 1
 		if diff < m.windowSize {
 			return m.Values[idx1][diff]
 		}
 		return 0
 	}
-	diff := idx1 - idx2
+	if idx1 == idx2 {
+		return 0
+	}
+	diff := idx1 - idx2 - 1
 	if diff < m.windowSize {
 		return m.Values[idx2][diff]
 	}
@@ -106,25 +109,48 @@ func (m *OptimizedMatrix) Max() (max float64, maxi, maxj int) {
 	max = .0
 	maxi = -1
 	maxj = -1
-	for i, row := range m.Values {
-		if !m.Excluded[i] {
-			for j, cell := range row {
-				if !m.Excluded[j] {
-					if cell > max {
-						max = cell
-						maxi = i
-						maxj = i + j
-					}
-				}
+
+	maxForIndex := .0
+	for i := range m.MaxForIndex {
+		if m.MaxForIndex[i] > maxForIndex {
+			maxForIndex = m.MaxForIndex[i]
+			maxi = i
+		}
+	}
+	if maxi > -1 {
+		for j, cell := range m.Values[maxi] {
+			if cell > max {
+				max = cell
+				maxj = maxi + j + 1
 			}
 		}
 	}
 	return
 }
 
+func maxInSlice(s []float64) float64 {
+	max := .0
+	for _, v := range s {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+
 // Exclude marks index as already used
 func (m *OptimizedMatrix) Exclude(index int) {
 	m.Excluded[index] = true
+	m.MaxForIndex[index] = 0
+	for i := range m.Values[:index] {
+		diff := index - i - 1
+		if m.Values[i][diff] == m.MaxForIndex[i] {
+			m.Values[i][diff] = 0
+			m.MaxForIndex[i] = maxInSlice(m.Values[i])
+		} else {
+			m.Values[i][diff] = 0
+		}
+	}
 }
 
 func (m *OptimizedMatrix) IsExcluded(index int) bool {

@@ -279,6 +279,8 @@ func ExtractOptimized(arena *arena.Arena) *Matrix {
 	fmt.Printf("arena length: %v\n", len(arena.List))
 
 	matrix := NewOptimizedRateMatrixAsync(len(arena.List), len(arena.List), 4, func(i, j int) float64 {
+		// matrix := NewOptimizedRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
+		// matrix := NewRateMatrix(len(arena.List), len(arena.List), func(i, j int) float64 {
 		if j <= i {
 			return 0
 		}
