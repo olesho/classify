@@ -7,22 +7,41 @@ import (
 
 // OptimizedMatrix represents similarity between document elements
 type OptimizedMatrix struct {
-	// Values is H x W float64 matrix where H - size of arena list (all elements), W - sliding window size (number)
+	// Values is H x W float32 matrix where H - size of arena list (all elements), W - sliding window size (number)
 	// Values[X][Y] means values of similarity between arena.List[X] and arena.List[X+Y]
-	Values      [][]float64
-	MaxForIndex []float64
+	Values      [][]float32
+	MaxForIndex []float32
 	Excluded    []bool
 	windowSize  int
+	wg          sync.WaitGroup
+}
+
+func Clone(matrix *OptimizedMatrix) *OptimizedMatrix {
+	cp := &OptimizedMatrix{}
+	cp.Values = make([][]float32, len(matrix.Values))
+	for i := range cp.Values {
+		cp.Values[i] = make([]float32, len(matrix.Values[i]))
+		copy(cp.Values[i], matrix.Values[i])
+	}
+	cp.MaxForIndex = make([]float32, len(matrix.MaxForIndex))
+	copy(cp.MaxForIndex, matrix.MaxForIndex)
+
+	cp.Excluded = make([]bool, len(matrix.Excluded))
+	copy(cp.Excluded, matrix.Excluded)
+
+	cp.windowSize = matrix.windowSize
+	return cp
 }
 
 // NewOptimizedRateMatrixAsync creates similarity matrix using provided comparation function
-func NewOptimizedRateMatrixAsync(length, windowLength, numCPU int, cmp func(i, j int) float64) *OptimizedMatrix {
+func NewOptimizedRateMatrixAsync(length, windowLength, numCPU int, cmp func(i, j int) float32) *OptimizedMatrix {
 	rm := &OptimizedMatrix{
-		Values:      make([][]float64, length),
-		MaxForIndex: make([]float64, length),
+		Values:      make([][]float32, length),
+		MaxForIndex: make([]float32, length),
 		Excluded:    make([]bool, length),
 
 		windowSize: windowLength,
+		wg:         sync.WaitGroup{},
 	}
 
 	index := new(int32)
@@ -38,8 +57,8 @@ func NewOptimizedRateMatrixAsync(length, windowLength, numCPU int, cmp func(i, j
 					currWindowLength = length - idx
 				}
 
-				rm.Values[idx] = make([]float64, currWindowLength)
-				max := .0
+				rm.Values[idx] = make([]float32, currWindowLength)
+				var max float32 = .0
 				for j := range rm.Values[idx : idx+currWindowLength-1] {
 					val := cmp(idx, idx+j+1)
 					if val > max {
@@ -58,10 +77,10 @@ func NewOptimizedRateMatrixAsync(length, windowLength, numCPU int, cmp func(i, j
 }
 
 // NewOptimizedRateMatrix creates similarity matrix using provided comparation function
-func NewOptimizedRateMatrix(length, windowLength int, cmp func(i, j int) float64) *OptimizedMatrix {
+func NewOptimizedRateMatrix(length, windowLength int, cmp func(i, j int) float32) *OptimizedMatrix {
 	rm := &OptimizedMatrix{
-		Values:      make([][]float64, length),
-		MaxForIndex: make([]float64, length),
+		Values:      make([][]float32, length),
+		MaxForIndex: make([]float32, length),
 		Excluded:    make([]bool, length),
 		windowSize:  windowLength,
 	}
@@ -71,8 +90,8 @@ func NewOptimizedRateMatrix(length, windowLength int, cmp func(i, j int) float64
 			currWindowLength = length - i
 		}
 
-		rm.Values[i] = make([]float64, currWindowLength)
-		max := .0
+		rm.Values[i] = make([]float32, currWindowLength)
+		var max float32 = .0
 		for j := range rm.Values[i : i+currWindowLength-1] {
 			val := cmp(i, i+j+1)
 			if val > max {
@@ -85,8 +104,8 @@ func NewOptimizedRateMatrix(length, windowLength int, cmp func(i, j int) float64
 	return rm
 }
 
-// Cmp returns similarity by given indexes
-func (m *OptimizedMatrix) Cmp(idx1, idx2 int) float64 {
+// Get returns similarity by given indexes
+func (m *OptimizedMatrix) Get(idx1, idx2 int) float32 {
 	if idx1 < idx2 {
 		diff := idx2 - idx1 - 1
 		if diff < m.windowSize {
@@ -105,12 +124,12 @@ func (m *OptimizedMatrix) Cmp(idx1, idx2 int) float64 {
 }
 
 // Max returns maximum similarity value and indexes
-func (m *OptimizedMatrix) Max() (max float64, maxi, maxj int) {
+func (m *OptimizedMatrix) Max() (max float32, maxi, maxj int) {
 	max = .0
 	maxi = -1
 	maxj = -1
 
-	maxForIndex := .0
+	var maxForIndex float32 = .0
 	for i := range m.MaxForIndex {
 		if m.MaxForIndex[i] > maxForIndex {
 			maxForIndex = m.MaxForIndex[i]
@@ -128,8 +147,8 @@ func (m *OptimizedMatrix) Max() (max float64, maxi, maxj int) {
 	return
 }
 
-func maxInSlice(s []float64) float64 {
-	max := .0
+func maxInSlice(s []float32) float32 {
+	var max float32 = .0
 	for _, v := range s {
 		if v > max {
 			max = v
@@ -139,7 +158,26 @@ func maxInSlice(s []float64) float64 {
 }
 
 // Exclude marks index as already used
-func (m *OptimizedMatrix) Exclude(index int) {
+func (m *OptimizedMatrix) Exclude(idx1, idx2 int) {
+	if idx1 < idx2 {
+		diff := idx2 - idx1 - 1
+		if diff < m.windowSize {
+			m.Values[idx1][diff] = 0
+		}
+		return
+	}
+	if idx1 == idx2 {
+		return
+	}
+	diff := idx1 - idx2 - 1
+	if diff < m.windowSize {
+		m.Values[idx2][diff] = 0
+	}
+	return
+}
+
+// Exclude marks index as already used
+func (m *OptimizedMatrix) ExcludeRow(index int) {
 	m.Excluded[index] = true
 	m.MaxForIndex[index] = 0
 	for i := range m.Values[:index] {
@@ -153,13 +191,35 @@ func (m *OptimizedMatrix) Exclude(index int) {
 	}
 }
 
-func (m *OptimizedMatrix) IsExcluded(index int) bool {
+func (m *OptimizedMatrix) IsRowExcluded(index int) bool {
 	if index >= len(m.Excluded) {
 		return true
 	}
 	return m.Excluded[index]
 }
 
-func (m *OptimizedMatrix) Candidates(idx int) (startingIndex int, values []float64) {
-	return idx + 1, m.Values[idx]
+func (m *OptimizedMatrix) Candidates(idxs []int) (pairIdxs []int) {
+	for _, idx := range idxs {
+		pairIdxs = append(pairIdxs, m.candidatesForIdx(idx)...)
+	}
+	return
+}
+
+func (m *OptimizedMatrix) candidatesForIdx(idx int) (pairIdxs []int) {
+	for pairIdx, val := range m.Values[idx] {
+		if val > 0 {
+			pairIdxs = append(pairIdxs, idx+pairIdx+1)
+		}
+	}
+	for pairIdx, row := range m.Values {
+		shiftIdx := idx - pairIdx - 1
+		if shiftIdx >= len(row) || shiftIdx < 0 {
+			continue
+		}
+		val := row[shiftIdx]
+		if val > 0 {
+			pairIdxs = append(pairIdxs, pairIdx)
+		}
+	}
+	return
 }

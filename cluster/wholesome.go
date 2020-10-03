@@ -3,7 +3,7 @@ package cluster
 //
 //import "github.com/olesho/classify"
 //
-//func wholesomeVolume(a *classify.Arena, matrix *RateMatrix, members []int) float64 {
+//func wholesomeVolume(a *classify.Arena, matrix *RateMatrix, members []int) float32 {
 //	if len(members) > 0 {
 //
 //		m := make([][]int, len(members))
@@ -23,7 +23,7 @@ package cluster
 //			}
 //		}
 //
-//		return float64((wholesomeCnt-identicalCnt) * len(members))
+//		return float32((wholesomeCnt-identicalCnt) * len(members))
 //	}
 //	return 0
 //}

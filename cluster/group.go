@@ -8,9 +8,9 @@ import (
 
 type ClusterGroup struct {
 	Clusters        []Cluster
-	Volume          float64
-	WholesomeVolume float64
-	GroupVolume     float64
+	Volume          float32
+	WholesomeVolume float32
+	GroupVolume     float32
 	Size            int
 }
 

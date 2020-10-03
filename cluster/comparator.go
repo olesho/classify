@@ -8,7 +8,7 @@ import (
 )
 
 type Comparator interface {
-	Cmp(n1, n2 *arena.Node) float64
+	Cmp(n1, n2 *arena.Node) float32
 }
 
 type DefaultComparator struct {
@@ -19,7 +19,7 @@ func NewDefaultComparator(a *arena.Arena) *DefaultComparator {
 	return &DefaultComparator{a}
 }
 
-func (c *DefaultComparator) Cmp(n1, n2 *arena.Node) float64 {
+func (c *DefaultComparator) Cmp(n1, n2 *arena.Node) float32 {
 	if c.cmpColumns(n1, n2) == 0 {
 		return 0 // strict rule
 	}
@@ -36,14 +36,14 @@ func hasStr(s string, ss []string) bool {
 	return false
 }
 
-func (s *DefaultComparator) cmpElements(n1, n2 *arena.Node) float64 {
+func (s *DefaultComparator) cmpElements(n1, n2 *arena.Node) float32 {
 	if n1.Type == n2.Type && n1.Type == html.TextNode {
 		return 1
 		//return cmpStrings(n1.Data, n2.Data)
 	}
 	if n1.Type == n2.Type {
 		if n1.Data == n2.Data {
-			coincided := 1.
+			var coincided float32 = 1.
 			for _, attr1 := range n1.Attr {
 				for _, attr2 := range n2.Attr {
 					if attr1.Key == attr2.Key {
@@ -70,7 +70,7 @@ func (s *DefaultComparator) cmpElements(n1, n2 *arena.Node) float64 {
 	return 0
 }
 
-func (s *DefaultComparator) cmpFull(n1, n2 *arena.Node) float64 {
+func (s *DefaultComparator) cmpFull(n1, n2 *arena.Node) float32 {
 	el := s.cmpElements(n1, n2)
 	// strict tag names should coincide
 	if el == 0 {
@@ -80,7 +80,7 @@ func (s *DefaultComparator) cmpFull(n1, n2 *arena.Node) float64 {
 	return el + ch
 }
 
-func (s *DefaultComparator) cmpColumns(n1, n2 *arena.Node) float64 {
+func (s *DefaultComparator) cmpColumns(n1, n2 *arena.Node) float32 {
 	chain1 := s.arena.Chain(n1.Id, 0)
 	chain2 := s.arena.Chain(n2.Id, 0)
 	size1 := len(chain1)
@@ -88,7 +88,7 @@ func (s *DefaultComparator) cmpColumns(n1, n2 *arena.Node) float64 {
 	if size1 != size2 {
 		return 0
 	}
-	r := 0.
+	var r float32 = 0.
 	for index := 1; (index < size1) && (index < size2); index++ {
 		re := s.cmpElements(chain1[index], chain2[index])
 		if re == 0 {
@@ -96,10 +96,10 @@ func (s *DefaultComparator) cmpColumns(n1, n2 *arena.Node) float64 {
 		}
 		r += re
 	}
-	return r / float64(size1)
+	return r / float32(size1)
 }
 
-func (s *DefaultComparator) cmpChildren(n1, n2 *arena.Node) float64 {
+func (s *DefaultComparator) cmpChildren(n1, n2 *arena.Node) float32 {
 	size1, size2 := len(n1.Children), len(n2.Children)
 	rating := make([]RateItem, size1*size2)
 	for i1, idx1 := range n1.Children {
@@ -126,7 +126,7 @@ func (s *DefaultComparator) cmpChildren(n1, n2 *arena.Node) float64 {
 		smallerSize = size2
 	}
 
-	coincided := 0.
+	var coincided float32 = 0.
 	for _, rate := range rating {
 		if !flags1[rate.Index1] && !flags2[rate.Index2] {
 			if rate.Coincided == 0 {
@@ -146,22 +146,22 @@ func (s *DefaultComparator) cmpChildren(n1, n2 *arena.Node) float64 {
 }
 
 type RateItem struct {
-	Coincided float64
+	Coincided float32
 	Index1    int
 	Index2    int
 }
 
 type Ratio struct {
-	Num float64
-	Den float64
+	Num float32
+	Den float32
 }
 
 type Result struct {
-	Coincided float64
-	Total     float64
+	Coincided float32
+	Total     float32
 }
 
-func cmpStrings(s1 string, s2 string) float64 {
+func cmpStrings(s1 string, s2 string) float32 {
 	if len(s1) == 0 && len(s2) == 0 {
 		return 0
 	}
@@ -169,7 +169,7 @@ func cmpStrings(s1 string, s2 string) float64 {
 		return 0
 	}
 
-	var coincided float64
+	var coincided float32
 	l := len(s2)
 	if len(s1) < len(s2) {
 		l = len(s1)
@@ -190,7 +190,7 @@ func cmpStrings(s1 string, s2 string) float64 {
 			break
 		}
 	}
-	return coincided * 2 / float64(len(s1)+len(s2))
+	return coincided * 2 / float32(len(s1)+len(s2))
 }
 
 func isLowerChar(c byte) bool {

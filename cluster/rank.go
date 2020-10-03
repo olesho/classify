@@ -15,8 +15,8 @@ type Series struct {
 	Matrix []Row
 	Arena  *arena.Arena
 	Group  *ClusterGroup
-	//Volume float64
-	//WholesomeVolume float64
+	//Volume float32
+	//WholesomeVolume float32
 	//Size int
 }
 
