@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
 
 	"golang.org/x/text/encoding/htmlindex"
@@ -84,14 +83,12 @@ func funcWeb(command string) {
 			log.Println(err)
 			return
 		}
-
-		n, err := html.Parse(reader)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		if defaultArena != nil {
-			defaultArena.Append(*n)
+		if engine != nil {
+			err := engine.Load(reader)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		} else {
 			log.Println("empty context")
 		}
@@ -108,13 +105,12 @@ func funcChrome(command string) {
 			log.Println(err)
 		}
 
-		n, err := html.Parse(bytes.NewBuffer(data))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		if defaultArena != nil {
-			defaultArena.Append(*n)
+		if engine != nil {
+			err := engine.Load(bytes.NewBuffer(data))
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		} else {
 			log.Println("empty context")
 		}

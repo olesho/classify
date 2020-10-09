@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/c-bata/go-prompt"
-	"github.com/olesho/classify/arena"
+	"github.com/olesho/classify/stream"
 )
 
 var history []string
@@ -23,7 +23,7 @@ func main() {
 		log.Println(err)
 	}
 	history = strings.Split(string(bts), "\n")
-	defaultArena = arena.NewArena()
+	engine = stream.NewEngine()
 	for {
 		input := prompt.Input("> ", completer, prompt.OptionHistory(history))
 		history = append(history, input)

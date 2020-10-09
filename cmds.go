@@ -1,15 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/c-bata/go-prompt"
-	"golang.org/x/net/html"
 )
 
 type Cmd struct {
@@ -43,20 +40,12 @@ var commands = []Cmd{
 		Func: func(command string) {
 			parts := fileRule.FindStringSubmatch(command)
 			if len(parts) > 1 {
-				f, err := os.Open(parts[1])
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				defer f.Close()
-				reader := bufio.NewReader(f)
-				n, err := html.Parse(reader)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				if defaultArena != nil {
-					defaultArena.Append(*n)
+				if engine != nil {
+					err := engine.LoadFile(parts[1])
+					if err != nil {
+						log.Println(err)
+						return
+					}
 				} else {
 					log.Println("no context")
 				}

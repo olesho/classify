@@ -10,16 +10,17 @@ import (
 
 	"github.com/c-bata/go-prompt"
 	"github.com/nathan-fiscaletti/consolesize-go"
-	"github.com/olesho/classify/arena"
-	"github.com/olesho/classify/cluster"
+	"github.com/olesho/classify/stream"
 )
 
-var defaultArena *arena.Arena
-var matrix *cluster.Matrix
+//var defaultArena *arena.Arena
+var engine *stream.Engine
+var matrix *stream.Matrix
 
 func funcReset(command string) {
 	matrix = nil
-	defaultArena = arena.NewArena()
+	engine = stream.NewEngine()
+	//defaultArena = arena.NewArena()
 }
 
 func funcClear(command string) {
@@ -60,7 +61,8 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 func funcShow(command string) {
 	if matrix == nil {
 		//matrix = cluster.Extract(defaultArena)
-		matrix = cluster.ExtractOptimized(defaultArena)
+		//matrix = cluster.ExtractOptimized(defaultArena)
+		matrix = engine.Run(0, 4)
 		fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
 	}
 	if matrix != nil {
@@ -75,20 +77,20 @@ func funcShow(command string) {
 				switch dataType {
 				case "elem":
 					renderOutput(idx, func(itemID int) []string {
-						return []string{defaultArena.StringifyNode(itemID)}
+						return []string{engine.Arena.StringifyNode(itemID)}
 					})
 				case "path":
 					renderOutput(idx, func(itemID int) []string {
-						return []string{defaultArena.Chain(itemID, 0).XPath()}
+						return []string{engine.Arena.Chain(itemID, 0).XPath()}
 					})
 				case "html":
 					renderOutput(idx, func(itemID int) []string {
-						data, _ := defaultArena.RenderString(itemID)
+						data, _ := engine.Arena.RenderString(itemID)
 						return []string{data}
 					})
 				case "text":
 					renderOutput(idx, func(itemID int) []string {
-						return defaultArena.StringifyInformation(itemID)
+						return engine.Arena.StringifyInformation(itemID)
 					})
 				}
 			}

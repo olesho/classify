@@ -1,0 +1,378 @@
+package stream
+
+import (
+	"sort"
+	"strings"
+
+	"github.com/olesho/classify/arena"
+	"golang.org/x/net/html"
+)
+
+// ClusterMatrix describes cluster of related nodes and similarity values
+type ClusterMatrix struct {
+	Indexes []int
+	Values  [][]float32
+
+	windowSize int
+}
+
+// Cluster describes cluster of related nodes (level2)
+type Cluster struct {
+	Indexes []int
+	Rate    float32
+
+	parentMatrix *ClusterMatrix
+}
+
+// Clone returns cluster matrix copy
+func (m *ClusterMatrix) Clone() *ClusterMatrix {
+	c := &ClusterMatrix{
+		Indexes:    make([]int, len(m.Indexes)),
+		Values:     make([][]float32, len(m.Values)),
+		windowSize: m.windowSize,
+	}
+	copy(c.Indexes, m.Indexes)
+	for i := range c.Values {
+		c.Values[i] = make([]float32, len(m.Values[i]))
+		copy(c.Values[i], m.Values[i])
+	}
+	return c
+}
+
+// ExcludeRow erases all values in row and column
+func (m *ClusterMatrix) ExcludeRow(index int) {
+	for i := range m.Values[index] {
+		m.Values[index][i] = 0
+	}
+	for i := range m.Values {
+		if i < index {
+			m.Values[i][index-i-1] = 0
+		}
+	}
+}
+
+// Exclude single intersection
+func (m *ClusterMatrix) Exclude(y, x int) {
+	if y > x {
+		if y-x-1 > len(m.Values[x]) {
+			m.Values[x][y-x-1] = 0
+			return
+		}
+	}
+	if x < y {
+		if x-y-1 > len(m.Values[y]) {
+			m.Values[y][x-y-1] = 0
+		}
+	}
+}
+
+// Clusters generates lvl2 clusters from matrix
+func (m *ClusterMatrix) Clusters() (clusters []*Cluster) {
+	c := m.Clone()
+	for {
+		maxi, maxj, maxRate := c.max()
+		if maxi < 0 {
+			break
+		}
+
+		c.Values[maxi][maxj-maxi-1] = 0
+		cluster := &Cluster{
+			Indexes: []int{maxi, maxj},
+			Rate:    maxRate,
+
+			parentMatrix: m,
+		}
+
+		for nextVal, nextIndex := c.nextCandidate(cluster); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster) {
+			if !cluster.tryAdd(nextVal, nextIndex) {
+				break
+			}
+			for _, idx := range cluster.Indexes {
+				c.Exclude(idx, nextIndex)
+			}
+		}
+		for _, idx := range cluster.Indexes {
+			c.ExcludeRow(idx)
+		}
+		for i, idx := range cluster.Indexes {
+			cluster.Indexes[i] = c.Indexes[idx]
+		}
+		clusters = append(clusters, cluster)
+	}
+
+	return clusters
+}
+
+func (m *ClusterMatrix) max() (maxI, maxJ int, val float32) {
+	// maxY = -1
+	// maxX = -1
+	maxI = -1
+	maxJ = -1
+	for i, row := range m.Values {
+		for j, curVal := range row {
+			if curVal > val {
+				val = curVal
+				maxI = i
+				maxJ = i + j + 1
+			}
+		}
+	}
+	// if maxI > -1 && maxJ > -1 {
+	// 	maxY = m.Indexes[maxI]
+	// 	maxX = m.Indexes[maxJ]
+	// }
+	return
+}
+
+func (m *ClusterMatrix) maxAxis(idx int) (pairIdx int, val float32) {
+	pairIdx = -1
+	// checking Y-X pairs where Y = idx
+	for j, curVal := range m.Values[idx] {
+		if curVal > val {
+			val = curVal
+			pairIdx = j
+		}
+	}
+	// checking Y-X pairs where X = idx
+	for i, row := range m.Values {
+		curVal := row[idx]
+		if curVal > val {
+			val = curVal
+			pairIdx = i
+		}
+	}
+	return
+}
+
+func (matrix *ClusterMatrix) nextCandidate(c *Cluster) (float32, int) {
+	var maxCandidateRate float32 = .0
+	maxCandidateIdx := -1
+
+	candidateIndexes := matrix.candidates(c)
+	for _, candidateIndex := range candidateIndexes {
+		rate := matrix.rateCandidate(c, candidateIndex)
+		if rate > maxCandidateRate {
+			maxCandidateRate = rate
+			maxCandidateIdx = candidateIndex
+		}
+	}
+	return maxCandidateRate, maxCandidateIdx
+}
+
+func (matrix *ClusterMatrix) rateCandidate(c *Cluster, candidateIdx int) float32 {
+	lowestVal := matrix.Get(c.Indexes[0], candidateIdx)
+	for _, memberIdx := range c.Indexes[1:] {
+		v := matrix.Get(memberIdx, candidateIdx)
+		if v < lowestVal {
+			lowestVal = v
+		}
+	}
+	return lowestVal
+}
+
+func (m *ClusterMatrix) candidates(c *Cluster) (pairIdxs []int) {
+	for i := range m.Indexes {
+		if !c.hasIndex(i) {
+			pairIdxs = append(pairIdxs, i)
+		}
+	}
+	return
+}
+
+func (c *Cluster) hasIndex(idx int) bool {
+	for _, i := range c.Indexes {
+		if i == idx {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Cluster) tryAdd(candidateRate float32, candidateIndex int) bool {
+	if c.Volume() < candidateRate*float32(len(c.Indexes)+1) {
+		c.Rate = candidateRate
+		c.Indexes = append(c.Indexes, candidateIndex)
+		return true
+	}
+	return false
+}
+
+func (c *Cluster) Volume() float32 {
+	return float32(len(c.Indexes)) * c.Rate
+}
+
+func (c *Cluster) toTable(a *arena.Arena) Table {
+	templateArena := c.MergeAll(a, c.Indexes)
+	result := Table{
+		Arena:         a,
+		TemplateArena: templateArena,
+		Members:       make([]*arena.Node, len(c.Indexes)),
+		Rate:          c.Rate,
+	}
+
+	result.Table = result.WholesomeGroupTable()
+	for i, memberIdx := range c.Indexes {
+		result.Members[i] = a.Get(memberIdx)
+	}
+
+	return result
+}
+
+// MergeAll merges all nodes with indexes into single template producing new arena
+func (c *Cluster) MergeAll(arena *arena.Arena, indexes []int) *arena.Arena {
+	rootID := indexes[0]
+	templateArena := initClone(arena, rootID)
+	for _, nextID := range indexes[1:] {
+		templateArena.List[1].Ext.(*Additional).AppendGroupId(nextID)
+		c.MergeIntoTemplate(arena, templateArena, nextID, 1)
+	}
+	return templateArena
+}
+
+func initClone(arena *arena.Arena, root int) *arena.Arena {
+	res := arena.CloneBranch(root)
+	Init(res)
+	for i := range res.List[1:] {
+		res.List[1:][i].Ext.(*Additional).AppendGroupId(i + root)
+	}
+	return res
+}
+
+type mergeItem struct {
+	Similarity    float32
+	Index1        int
+	Index2        int
+	TemplateIndex int
+}
+
+func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
+	mergedAttrs := []html.Attribute{}
+	for _, attr1 := range node1.Attr {
+		for _, attr2 := range node2.Attr {
+			if attr1.Key == attr2.Key {
+				mergedAttr := html.Attribute{
+					Key: attr1.Key,
+				}
+				if mergedAttr.Key == "class" {
+					mergedClasses := []string{}
+					for _, class1 := range node1.Classes() {
+						for _, class2 := range node2.Classes() {
+							if class1 == class2 {
+								mergedClasses = append(mergedClasses, class1)
+							}
+						}
+					}
+					mergedAttr.Val = strings.Join(mergedClasses, " ")
+				} else {
+					if attr1.Val == attr2.Val {
+						mergedAttr.Val = attr1.Val
+					}
+				}
+				mergedAttrs = append(mergedAttrs, mergedAttr)
+			}
+		}
+	}
+	return mergedAttrs
+}
+
+func (c *Cluster) MergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateIdx int) {
+	n1 := mainArena.Get(mainIdx)
+	templateNode := templateArena.Get(templateIdx)
+	n2 := mainArena.Get(templateNode.Ext.(*Additional).GroupIds[0])
+
+	// merge attributes
+	templateArena.List[templateIdx].Attr = mergeIntoTemplateAttrs(templateNode, n1)
+
+	// merge text node
+	if templateNode.Type == html.TextNode && n1.Type == html.TextNode {
+		if templateNode.Data != n1.Data {
+			templateNode.Data = "#text"
+		}
+	}
+
+	// merge children
+	size1, size2 := len(n1.Children), len(n2.Children)
+	ratingMatrixSize := size1 * size2
+	if ratingMatrixSize > 0 {
+		rating := make([]mergeItem, ratingMatrixSize)
+		for i1, idx1 := range n1.Children {
+			for i2, idx2 := range n2.Children {
+				idx := (i1+1)*(i2+1) - 1
+				rating[idx].Similarity = c.parentMatrix.Find(idx1, idx2)
+				rating[idx].Index1 = i1
+				rating[idx].Index2 = i2
+				rating[idx].TemplateIndex = templateNode.Children[i2]
+			}
+		}
+
+		sort.Slice(rating, func(i, j int) bool {
+			return rating[i].Similarity > rating[j].Similarity
+		})
+
+		flags1 := make([]bool, size1)
+		flags2 := make([]bool, size2)
+		count := 0
+		smallerSize := 0
+		if size1 < size2 {
+			smallerSize = size1
+		} else {
+			smallerSize = size2
+		}
+
+		for _, rate := range rating { // TODO add exit if rate.Similarity == 0 !!!
+			if !flags1[rate.Index1] && !flags2[rate.Index2] {
+				if rate.Similarity == 0 {
+					break
+				}
+				templateChildNode := templateArena.Get(templateNode.Children[rate.Index2])
+				idx := n1.Children[rate.Index1]
+				templateChildNode.Ext.(*Additional).AppendGroupId(idx)
+				c.MergeIntoTemplate(mainArena, templateArena, idx, rate.TemplateIndex)
+				flags1[rate.Index1] = true
+				flags2[rate.Index2] = true
+				count++
+				if count == smallerSize {
+					break
+				}
+			}
+		}
+	}
+}
+
+// Find returns similarity by given global indexes
+func (m *ClusterMatrix) Find(idx1, idx2 int) float32 {
+	i, j := -1, -1
+	for n, idx := range m.Indexes {
+		if idx == idx1 {
+			i = n
+			break
+		}
+	}
+	for n, idx := range m.Indexes {
+		if idx == idx2 {
+			j = n
+			break
+		}
+	}
+
+	return m.Get(i, j)
+}
+
+// Get returns similarity by given local indexes
+func (m *ClusterMatrix) Get(i, j int) float32 {
+	if i < j {
+		diff := j - i - 1
+		if diff < m.windowSize {
+			return m.Values[i][diff]
+		}
+		return 0
+	}
+	if i == j {
+		return 0
+	}
+	diff := i - j - 1
+	if diff < m.windowSize {
+		return m.Values[j][diff]
+	}
+	return 0
+}
