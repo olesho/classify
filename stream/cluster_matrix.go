@@ -13,7 +13,7 @@ type ClusterMatrix struct {
 	Indexes []int
 	Values  [][]float32
 
-	windowSize int
+	windowLength int
 }
 
 // Cluster describes cluster of related nodes (level2)
@@ -27,9 +27,9 @@ type Cluster struct {
 // Clone returns cluster matrix copy
 func (m *ClusterMatrix) Clone() *ClusterMatrix {
 	c := &ClusterMatrix{
-		Indexes:    make([]int, len(m.Indexes)),
-		Values:     make([][]float32, len(m.Values)),
-		windowSize: m.windowSize,
+		Indexes:      make([]int, len(m.Indexes)),
+		Values:       make([][]float32, len(m.Values)),
+		windowLength: m.windowLength,
 	}
 	copy(c.Indexes, m.Indexes)
 	for i := range c.Values {
@@ -46,7 +46,9 @@ func (m *ClusterMatrix) ExcludeRow(index int) {
 	}
 	for i := range m.Values {
 		if i < index {
-			m.Values[i][index-i-1] = 0
+			if index-i-1 < len(m.Values[i]) {
+				m.Values[i][index-i-1] = 0
+			}
 		}
 	}
 }
@@ -54,7 +56,7 @@ func (m *ClusterMatrix) ExcludeRow(index int) {
 // Exclude single intersection
 func (m *ClusterMatrix) Exclude(y, x int) {
 	if y > x {
-		if y-x-1 > len(m.Values[x]) {
+		if y-x-1 < len(m.Values[x]) {
 			m.Values[x][y-x-1] = 0
 			return
 		}
@@ -160,11 +162,17 @@ func (matrix *ClusterMatrix) nextCandidate(c *Cluster) (float32, int) {
 }
 
 func (matrix *ClusterMatrix) rateCandidate(c *Cluster, candidateIdx int) float32 {
-	lowestVal := matrix.Get(c.Indexes[0], candidateIdx)
-	for _, memberIdx := range c.Indexes[1:] {
+	var lowestVal float32
+	for _, memberIdx := range c.Indexes {
 		v := matrix.Get(memberIdx, candidateIdx)
-		if v < lowestVal {
-			lowestVal = v
+		if v > 0 {
+			if lowestVal == 0 {
+				lowestVal = v
+				continue
+			}
+			if v < lowestVal {
+				lowestVal = v
+			}
 		}
 	}
 	return lowestVal
@@ -362,7 +370,7 @@ func (m *ClusterMatrix) Find(idx1, idx2 int) float32 {
 func (m *ClusterMatrix) Get(i, j int) float32 {
 	if i < j {
 		diff := j - i - 1
-		if diff < m.windowSize {
+		if diff < len(m.Values[i]) {
 			return m.Values[i][diff]
 		}
 		return 0
@@ -371,7 +379,7 @@ func (m *ClusterMatrix) Get(i, j int) float32 {
 		return 0
 	}
 	diff := i - j - 1
-	if diff < m.windowSize {
+	if diff < len(m.Values[j]) {
 		return m.Values[j][diff]
 	}
 	return 0

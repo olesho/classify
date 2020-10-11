@@ -2,59 +2,127 @@ package stream
 
 import (
 	"fmt"
+	"github.com/olesho/classify/arena"
 	"testing"
 )
 
 var testDoc1 = `
 	<html>
 		<body>
-			<div>
-				<p>Hello 1</p>
-			</div>
-			<div>
-				<p>Hello 2</p>
-			</div>
-			<div>
-				<p>Hello 3</p>
-			</div>
+			<section>
+				<div>
+					<p>Hello 1</p>
+				</div>
+				<div>
+					<p>Hello 2</p>
+				</div>
+				<div>
+					<p>Hello 3</p>
+				</div>
+			</section>
+			<p> some garbage ad </p>
+			<span> some garbage ad </span>
+			<b>  some garbage ad </b>
+			<div>  some garbage ad </div>
+			<h1>  some garbage ad  </h1>
+			<h2>  some garbage ad  </h2>
+			<h3>  some garbage ad  </h3>
+			<section>
+				<div>
+					<p>Hello 4</p>
+				</div>
+				<div>
+					<p>Hello 5</p>
+				</div>
+				<div>
+					<p>Hello 6</p>
+				</div>
+			</section>
+			<p> some garbage ad </p>
+			<span> some garbage ad </span>
+			<b>  some garbage ad </b>
+			<div>  some garbage ad </div>
+			<h1>  some garbage ad  </h1>
+			<h2>  some garbage ad  </h2>
+			<h3>  some garbage ad  </h3>
+			<section>
+				<div>
+					<p>Hello 7</p>
+				</div>
+				<div>
+					<p>Hello 9</p>
+				</div>
+				<div>
+					<p>Hello 10</p>
+				</div>
+			</section>
 		</body>
 	</html>
 `
 
-func TestStream(t *testing.T) {
-	s := NewEngine()
-
-	err := s.LoadString(testDoc1)
-	//err := s.LoadFile("../fox.html")
-	if err != nil {
-		t.Error(err)
-	}
-
-	s.Run(0, 4)
-
-	for _, m := range s.Storage {
-		if len(m.Indexes) != len(m.Values) {
-			t.Error("indexes not equal to values")
-		}
-		size := len(m.Values)
-		for i, row := range m.Values {
-			if len(row)+i+1 != size {
-				t.Errorf("values row has incorrect size %v vs %v", len(row)+i+1, size)
-			}
-		}
-	}
-}
-
 func TestStreamGroups(t *testing.T) {
-	s := NewEngine()
+	s := NewEngine(4)
 
 	err := s.LoadString(testDoc1)
 	if err != nil {
 		t.Error(err)
 	}
 
-	matrix := s.Run(0, 4)
+	matrix := s.Run(0)
 	for i, row := range matrix.Matrix {
 		fmt.Println(i, row.String())
 	}
+}
+
+func TestStreamShortWindow(t *testing.T) {
+	s := NewEngine(4)
+
+	//err := s.LoadFile("../fox.html")
+	err := s.LoadString(testDoc1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	matrix := s.Run(4)
+	for i, row := range matrix.Matrix {
+		fmt.Println(i, row.String())
+	}
+}
+
+type dummyComparator struct {}
+
+func (dc *dummyComparator) Cmp(n1, n2 *arena.Node) float32 {
+	return float32(n1.Id * n2.Id)
+}
+
+func TestMergeClusterMatrix(t *testing.T) {
+	s := NewEngine(4)
+
+	//err := s.LoadFile("../fox.html")
+	err := s.LoadString(testDoc1)
+	if err != nil {
+		t.Error(err)
+	}
+	s.cmp = &dummyComparator{}
+
+	m1 := &ClusterMatrix{
+		Indexes: []int{1, 2, 3},
+		Values: [][]float32{
+			{2, 3},
+			{6},
+			{},
+		},
+	}
+
+	m2 := &ClusterMatrix{
+		Indexes: []int{4, 5, 6},
+		Values: [][]float32{
+			{20, 24},
+			{30},
+			{},
+		},
+	}
+
+	s.mergeClusterMatrix(m1, m2)
+	fmt.Println(m1)
 }

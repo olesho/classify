@@ -13,14 +13,14 @@ import (
 	"github.com/olesho/classify/stream"
 )
 
-//var defaultArena *arena.Arena
 var engine *stream.Engine
 var matrix *stream.Matrix
 
 func funcReset(command string) {
 	matrix = nil
-	engine = stream.NewEngine()
-	//defaultArena = arena.NewArena()
+	engine = stream.NewEngine(&stream.EngineOpts{
+		NumCPU: 4,
+	})
 }
 
 func funcClear(command string) {
@@ -58,12 +58,23 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 	return
 }
 
+func funcRun(command string) {
+	parts := runRule.FindStringSubmatch(command)
+	windowLength := 0
+	if len(parts) > 0 {
+		windowLength, _ = strconv.Atoi(parts[1])
+	}
+	engine.SetWindowSize(windowLength)
+	matrix = engine.Run()
+	fmt.Printf("succesfully loaded %v groups\n", len(matrix.Matrix))
+}
+
 func funcShow(command string) {
 	if matrix == nil {
-		//matrix = cluster.Extract(defaultArena)
-		//matrix = cluster.ExtractOptimized(defaultArena)
-		matrix = engine.Run(0, 4)
-		fmt.Printf("Loaded succesfully. Total groups: %v\n", len(matrix.Matrix))
+		matrix = engine.Run()
+		fmt.Printf("succesfully loaded %v groups\n" +
+			"" +
+			"", len(matrix.Matrix))
 	}
 	if matrix != nil {
 		parts := showRule.FindStringSubmatch(command)
@@ -92,6 +103,14 @@ func funcShow(command string) {
 					renderOutput(idx, func(itemID int) []string {
 						return engine.Arena.StringifyInformation(itemID)
 					})
+				case "info":
+					fmt.Println(engine.Arena.Chain(matrix.Matrix[idx].Matrix[0][0].Id, 0).XPath())
+					fmt.Printf("rows in group: %v\n", len(matrix.Matrix[idx].Matrix))
+					fmt.Printf("nodes in cluster: %v\n", len(matrix.Matrix[idx].Group.Clusters))
+					fmt.Printf("group volume: %v\n", matrix.Matrix[idx].Group.GroupVolume)
+					fmt.Printf("group size: %v\n", matrix.Matrix[idx].Group.Size)
+					fmt.Printf("volume: %v\n", matrix.Matrix[idx].Group.Volume)
+					fmt.Printf("wholesome volume: %v\n", matrix.Matrix[idx].Group.WholesomeVolume)
 				}
 			}
 		}

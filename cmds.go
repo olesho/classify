@@ -19,6 +19,7 @@ var qRule = regexp.MustCompile(`^q`)
 var exitRule = regexp.MustCompile(`^exit`)
 var fileRule = regexp.MustCompile(`^file\s+?(.+)`)
 var helpRule = regexp.MustCompile(`\?`)
+var runRule = regexp.MustCompile(`^run\s+(\d+)`)
 var showRule = regexp.MustCompile(`^show\s+(?:([a-z]+)?)\s+?([0-9]+)$`)
 var clearRule = regexp.MustCompile(`^clear`)
 var resetRule = regexp.MustCompile(`^reset`)
@@ -46,6 +47,7 @@ var commands = []Cmd{
 						log.Println(err)
 						return
 					}
+					fmt.Printf("%v nodes total\n", len(engine.Arena.List))
 				} else {
 					log.Println("no context")
 				}
@@ -79,6 +81,11 @@ var commands = []Cmd{
 		`)
 		},
 		Suggest: prompt.Suggest{Text: "help", Description: "help"},
+	},
+	{
+		Regexp:  runRule,
+		Func:    funcRun,
+		Suggest: prompt.Suggest{Text: "run 200", Description: "run N - starts analysis with running window of size N"},
 	},
 	{
 		Regexp:  showRule,

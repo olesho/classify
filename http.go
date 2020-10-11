@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"fmt"
 
 	"golang.org/x/net/html/charset"
 
@@ -51,6 +52,7 @@ func getContentCharset(r *http.Response) string {
 	contentType := r.Header.Get("content-type")
 	s := charsetRule.FindAllStringSubmatch(contentType, 1)
 	if len(s) > 0 {
+
 		if len(s[0]) > 1 {
 			return s[0][1]
 		}
@@ -89,6 +91,7 @@ func funcWeb(command string) {
 				log.Println(err)
 				return
 			}
+			fmt.Printf("%v nodes total\n", len(engine.Arena.List))
 		} else {
 			log.Println("empty context")
 		}
@@ -111,6 +114,7 @@ func funcChrome(command string) {
 				log.Println(err)
 				return
 			}
+			fmt.Printf("%v nodes total\n", len(engine.Arena.List))
 		} else {
 			log.Println("empty context")
 		}
