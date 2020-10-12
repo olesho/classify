@@ -61,29 +61,29 @@ var testDoc1 = `
 `
 
 func TestStreamGroups(t *testing.T) {
-	s := NewEngine(4)
+	s := NewEngine(nil)
 
 	err := s.LoadString(testDoc1)
 	if err != nil {
 		t.Error(err)
 	}
 
-	matrix := s.Run(0)
+	matrix := s.Run()
 	for i, row := range matrix.Matrix {
 		fmt.Println(i, row.String())
 	}
 }
 
 func TestStreamShortWindow(t *testing.T) {
-	s := NewEngine(4)
+	s := NewEngine(&EngineOpts{NumCPU: 4, WindowSize: 0})
 
-	//err := s.LoadFile("../fox.html")
-	err := s.LoadString(testDoc1)
+	err := s.LoadFile("../rozetka.html")
+	//err := s.LoadString(testDoc1)
 	if err != nil {
 		t.Error(err)
 	}
 
-	matrix := s.Run(4)
+	matrix := s.Run()
 	for i, row := range matrix.Matrix {
 		fmt.Println(i, row.String())
 	}
@@ -96,7 +96,7 @@ func (dc *dummyComparator) Cmp(n1, n2 *arena.Node) float32 {
 }
 
 func TestMergeClusterMatrix(t *testing.T) {
-	s := NewEngine(4)
+	s := NewEngine(&EngineOpts{NumCPU: 4})
 
 	//err := s.LoadFile("../fox.html")
 	err := s.LoadString(testDoc1)

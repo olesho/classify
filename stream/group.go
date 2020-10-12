@@ -52,9 +52,9 @@ func groupClusters(a *arena.Arena, bags []Table) []*ClusterGroup {
 		fill(bag)
 	}
 
-	groups := []*ClusterGroup{}
-	for _, cluster1 := range filteredBags {
-		groups = checkNextIntersectionStrict(a, groups, cluster1)
+	var groups []*ClusterGroup
+	for _, bag := range filteredBags {
+		groups = checkNextIntersectionStrict(a, groups, bag)
 	}
 
 	return groups

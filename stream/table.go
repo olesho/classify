@@ -14,10 +14,8 @@ type Table struct {
 	Members       []*arena.Node
 	Rate          float32
 	Volume        float32
-	Table         []Field
+	Fields         []Field
 }
-
-const MAX_TRIES = 4
 
 const (
 	NotField = iota
@@ -54,7 +52,7 @@ type Cell struct {
 
 func (c *Table) TemplateVolume() float32 {
 	var vol float32 = .0
-	for _, row := range c.Table {
+	for _, row := range c.Fields {
 		switch row.Type {
 		case TextField:
 			vol += textsVolume(row.Content)
@@ -113,7 +111,7 @@ func imgsVolume(strs []string) float32 {
 	return r
 }
 
-func (c *Table) WholesomeGroupTable() []Field {
+func (c *Table) WholesomeGroupFields() []Field {
 	result := make([]Field, 0)
 	for _, n := range c.TemplateArena.List {
 		if _, fieldType := WholesomeInfo(n); fieldType != NotField {

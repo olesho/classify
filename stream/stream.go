@@ -36,11 +36,12 @@ func NewEngine(opts *EngineOpts) *Engine {
 	a := arena.NewArena()
 	e := &Engine{
 		Arena: a,
-
-		windowSize: opts.WindowSize,
-		numCPU: opts.NumCPU,
-		cmp: opts.Comparator,
 		timer: NewTimer(),
+	}
+	if opts != nil {
+		e.windowSize = opts.WindowSize
+		e.numCPU = opts.NumCPU
+		e.cmp = opts.Comparator
 	}
 	if e.cmp == nil {
 		e.cmp = comparator.NewDefaultComparator(a)
@@ -174,8 +175,6 @@ func (e *Engine) mergeClusterMatricesAsync(input []*ClusterMatrix) []*ClusterMat
 		go func() {
 			for next := range pairs {
 				i, j := next[0], next[1]
-				locks[i].Lock()
-				locks[j].Lock()
 				e.mergeClusterMatrix(input[next[0]], input[next[1]])
 				input[j] = nil
 				locks[i].Unlock()
@@ -186,13 +185,16 @@ func (e *Engine) mergeClusterMatricesAsync(input []*ClusterMatrix) []*ClusterMat
 	}
 
 	for i := 0; i < len(input); i++ {
-		if input[i] != nil {
-			for j := i + 1; j < len(input); j++ {
-				if input[j] != nil {
-					val := e.cmp.Cmp(e.Arena.Get(input[i].Indexes[0]), e.Arena.Get(input[j].Indexes[0]))
-					if val > 0 {
-						pairs <- [2]int{i, j}
-					}
+		for j := i + 1; j < len(input); j++ {
+			if input[i] != nil && input[j] != nil {
+				locks[i].Lock()
+				locks[j].Lock()
+				val := e.cmp.Cmp(e.Arena.Get(input[i].Indexes[0]), e.Arena.Get(input[j].Indexes[0]))
+				if val > 0 {
+					pairs <- [2]int{i, j}
+				} else {
+					locks[i].Unlock()
+					locks[j].Unlock()
 				}
 			}
 		}
@@ -293,10 +295,6 @@ func (e *Engine) Run() *Matrix {
 	for i, cluster := range clusters {
 		tables[i] = cluster.toTable(e.Arena)
 	}
-
-	sort.Slice(clusters, func(i, j int) bool {
-		return clusters[i].Rate > clusters[j].Rate
-	})
 
 	clusterGroups := groupClusters(e.Arena, tables)
 	sort.Slice(clusterGroups, func(i, j int) bool {

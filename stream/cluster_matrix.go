@@ -218,7 +218,7 @@ func (c *Cluster) toTable(a *arena.Arena) Table {
 		Rate:          c.Rate,
 	}
 
-	result.Table = result.WholesomeGroupTable()
+	result.Fields = result.WholesomeGroupFields()
 	for i, memberIdx := range c.Indexes {
 		result.Members[i] = a.Get(memberIdx)
 	}
