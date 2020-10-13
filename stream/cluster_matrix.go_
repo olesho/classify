@@ -21,7 +21,7 @@ type Cluster struct {
 	Indexes []int
 	Rate    float32
 
-	parentMatrix *ClusterMatrix
+//	parentMatrix Finder
 }
 
 // Clone returns cluster matrix copy
@@ -82,7 +82,7 @@ func (m *ClusterMatrix) Clusters() (clusters []*Cluster) {
 			Indexes: []int{maxi, maxj},
 			Rate:    maxRate,
 
-			parentMatrix: m,
+			//parentMatrix: m,
 		}
 
 		for nextVal, nextIndex := c.nextCandidate(cluster); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster) {
@@ -227,12 +227,12 @@ func (c *Cluster) toTable(a *arena.Arena) Table {
 }
 
 // MergeAll merges all nodes with indexes into single template producing new arena
-func (c *Cluster) MergeAll(arena *arena.Arena, indexes []int) *arena.Arena {
+func (c *Cluster) MergeAll(f Finder, arena *arena.Arena, indexes []int) *arena.Arena {
 	rootID := indexes[0]
 	templateArena := initClone(arena, rootID)
 	for _, nextID := range indexes[1:] {
 		templateArena.List[1].Ext.(*Additional).AppendGroupId(nextID)
-		c.MergeIntoTemplate(arena, templateArena, nextID, 1)
+		c.MergeIntoTemplate(f, arena, templateArena, nextID, 1)
 	}
 	return templateArena
 }
@@ -283,7 +283,7 @@ func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
 	return mergedAttrs
 }
 
-func (c *Cluster) MergeIntoTemplate(mainArena, templateArena *arena.Arena, mainIdx, templateIdx int) {
+func (c *Cluster) MergeIntoTemplate(f Finder, mainArena, templateArena *arena.Arena, mainIdx, templateIdx int) {
 	n1 := mainArena.Get(mainIdx)
 	templateNode := templateArena.Get(templateIdx)
 	n2 := mainArena.Get(templateNode.Ext.(*Additional).GroupIds[0])

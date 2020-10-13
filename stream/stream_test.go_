@@ -2,7 +2,6 @@ package stream
 
 import (
 	"fmt"
-	"github.com/olesho/classify/arena"
 	"testing"
 )
 
@@ -82,17 +81,17 @@ func TestStreamShortWindow(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	matrix := s.Run()
-	for i, row := range matrix.Matrix {
-		fmt.Println(i, row.String())
-	}
+	s.Run()
+	//matrix := s.Run()
+	//for i, row := range matrix.Matrix {
+	//	fmt.Println(i, row.String())
+	//}
 }
 
 type dummyComparator struct {}
 
-func (dc *dummyComparator) Cmp(n1, n2 *arena.Node) float32 {
-	return float32(n1.Id * n2.Id)
+func (dc *dummyComparator) Cmp(idx1, idx2 int) float32 {
+	return float32(idx1 * idx2)
 }
 
 func TestMergeClusterMatrix(t *testing.T) {

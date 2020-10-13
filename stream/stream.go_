@@ -106,7 +106,7 @@ func (e *Engine) genLinesAsync(arenaLength, windowLength, numCPU int) (tempValue
 					lastIdx = arenaLength
 				}
 				for j := idx + 1; j < lastIdx; j++ {
-					val := e.cmp.Cmp(e.Arena.List[idx], e.Arena.List[j])
+					val := e.cmp.Cmp(idx, j)
 					if val > 0 {
 						tempIndexes[idx] = append(tempIndexes[idx], j)
 						tempValues[idx] = append(tempValues[idx], val)
@@ -155,10 +155,9 @@ func mergeLinesInWindow(arenaLength int, tempValues [][]float32, tempIndexes [][
 func (e *Engine) mergeClusterMatrix(dest, src *ClusterMatrix) {
 	// TODO: should limit dest.Indexes to [:e.WindowSize] to decrease computational complexity
 	for i, idx1 := range dest.Indexes {
-		node1 := e.Arena.List[idx1]
 		values := make([]float32, len(src.Indexes))
 		for j, idx2 := range src.Indexes {
-			values[j] = e.cmp.Cmp(node1, e.Arena.List[idx2])
+			values[j] = e.cmp.Cmp(idx1, idx2)
 		}
 		dest.Values[i] = append(dest.Values[i], values...)
 	}
@@ -189,7 +188,7 @@ func (e *Engine) mergeClusterMatricesAsync(input []*ClusterMatrix) []*ClusterMat
 			if input[i] != nil && input[j] != nil {
 				locks[i].Lock()
 				locks[j].Lock()
-				val := e.cmp.Cmp(e.Arena.Get(input[i].Indexes[0]), e.Arena.Get(input[j].Indexes[0]))
+				val := e.cmp.Cmp(input[i].Indexes[0], input[j].Indexes[0])
 				if val > 0 {
 					pairs <- [2]int{i, j}
 				} else {
@@ -217,7 +216,7 @@ func (e *Engine) mergeClusterMatrices(input []*ClusterMatrix) []*ClusterMatrix {
 		if input[i] != nil {
 			for j := i + 1; j < len(input); j++ {
 				if input[j] != nil {
-					val := e.cmp.Cmp(e.Arena.Get(input[i].Indexes[0]), e.Arena.Get(input[j].Indexes[0]))
+					val := e.cmp.Cmp(input[i].Indexes[0], input[j].Indexes[0])
 					if val > 0 {
 						e.mergeClusterMatrix(input[i], input[j])
 						input[j] = nil
