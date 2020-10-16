@@ -12,6 +12,14 @@ type Cluster struct {
 	Rate    float32
 }
 
+func (mtx *Mtx) FindIndexes(indexes []int) []int {
+	r := make([]int, len(indexes))
+	for i, idx := range indexes {
+		r[i] = mtx.Indexes[idx]
+	}
+	return r
+}
+
 func (s *Storage) toTable(c *Cluster) Table {
 	templateArena := s.MergeAll(c, c.Indexes)
 	result := Table{
@@ -158,6 +166,22 @@ func (c *Cluster) tryAdd(candidateRate float32, candidateIndex int) bool {
 		return true
 	}
 	return false
+}
+
+func (c *Cluster) add(candidateRate float32, candidateIndex int) *Cluster {
+	return &Cluster{
+		Indexes: append(c.Indexes, candidateIndex),
+		Rate: candidateRate,
+	}
+}
+
+func (c *Cluster) clone() *Cluster {
+	cc := &Cluster{
+		Indexes: make([]int, len(c.Indexes)),
+		Rate: c.Rate,
+	}
+	copy(cc.Indexes, c.Indexes)
+	return cc
 }
 
 func (c *Cluster) Volume() float32 {

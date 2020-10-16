@@ -6,11 +6,7 @@ import (
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
 	"os"
-	"runtime"
-	"sort"
 	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 type Finder interface {
@@ -87,116 +83,12 @@ func (s *Storage) LoadString(str string) error {
 	return nil
 }
 
-func (s *Storage) Run() {
-	s.NodeToCluster = make([]*Mtx, len(s.Arena.List))
-	for idx := range s.Arena.List {
-		s.next(idx)
-	}
-	for i := range s.Clusters {
-		s.clusterRun(i)
-	}
-}
-
-func (s *Storage) RunAsync() *Matrix {
-	s.timer.Start()
-
-	s.NodeToCluster = make([]*Mtx, len(s.Arena.List))
-	index := new(int32)
-	*index = -1
-	wg := sync.WaitGroup{}
-	wg.Add(runtime.NumCPU())
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go func() {
-			idx := int(atomic.AddInt32(index, 1))
-			for idx < len(s.Arena.List) {
-				s.next(idx)
-				idx = int(atomic.AddInt32(index, 1))
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	s.timer.Check("elements compared")
-
-	//for i := range s.Clusters {
-	//	s.clusterRun(i)
-	//}
-
-	for _, mtx := range s.Clusters {
-		nn := new(int32)
-		*nn = -1
-		wg.Add(runtime.NumCPU())
-		for i := 0; i < runtime.NumCPU(); i++ {
-			go func(i int) {
-				n := int(atomic.AddInt32(nn, 1))
-				for n < len(mtx.Values) {
-					idx1 := mtx.Indexes[n]
-					for m, idx2 := range mtx.Indexes[n+1:] {
-						mtx.Values[n][m] += s.cmpChildren(idx1, idx2)
-					}
-					n = int(atomic.AddInt32(nn, 1))
-				}
-				wg.Done()
-			}(i)
-		}
-		wg.Wait()
-	}
-	s.timer.Check("elements compared including children")
-
-	var clusters = make([]*Cluster, 0)
-	*index = -1
-	wg.Add(runtime.NumCPU())
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go func() {
-			idx := int(atomic.AddInt32(index, 1))
-			for idx < len(s.Clusters) {
-				clusters  = append(clusters, s.Clusters[idx].GenerateClusters()...)
-				idx = int(atomic.AddInt32(index, 1))
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	s.timer.Check("clusters generated")
-
-	tables := make([]Table, len(clusters))
-	for i, cluster := range clusters {
-		tables[i] = s.toTable(cluster)
-	}
-
-	clusterGroups := groupClusters(s.Arena, tables)
-	sort.Slice(clusterGroups, func(i, j int) bool {
-		return clusterGroups[i].GroupVolume > clusterGroups[j].GroupVolume
-	})
-
-	// transpose
-	rm := &Matrix{
-		Matrix: make([]Series, len(clusterGroups)),
-	}
-	for i, g := range clusterGroups {
-		rm.Matrix[i] = Series{
-			Matrix: transpose(g),
-			Arena:  s.Arena,
-			Group:  g,
-		}
-	}
-
-	// trace
-	s.timer.Check("all clusters sorted")
-	return rm
-}
-
 func (s *Storage) next(idx int) {
 	var i int
 	for i = 0; i < len(s.Clusters) && !s.TryAdd(i, idx); i++ {}
 	if i == len(s.Clusters) {
 		s.Clusters = append(s.Clusters, s.NewMtx(idx))
 	}
-
-	// not for async
-	//sort.Slice(s.Clusters, func(i, j int) bool {
-	//	return len(s.Clusters[i].indexes) > len(s.Clusters[j].indexes)
-	//})
 }
 
 func (s *Storage) clusterRun(clusterIdx int) {

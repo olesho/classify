@@ -2,7 +2,10 @@ package stream
 
 import (
 	"encoding/gob"
+	"fmt"
+	"github.com/olesho/classify/arena"
 	"os"
+	"sort"
 	"sync"
 )
 
@@ -82,13 +85,13 @@ func (m *Mtx) Get(i, j int) float32 {
 	return 0
 }
 
-func (m *Mtx) HasIdx(idx int) bool {
-	for _, nextIdx := range m.Indexes {
+func (m *Mtx) FindIdx(idx int) int {
+	for i, nextIdx := range m.Indexes {
 		if idx == nextIdx {
-			return true
+			return i
 		}
 	}
-	return false
+	return -1
 }
 
 // Clone returns cluster matrix copy
@@ -103,6 +106,27 @@ func (m *Mtx) Clone() *Mtx {
 		copy(c.Values[i], m.Values[i])
 	}
 	return c
+}
+
+// Clone returns cluster matrix copy
+func (m *Mtx) Equal(m2 *Mtx) bool {
+	if len(m.Indexes) != len(m2.Indexes) {
+		return false
+	}
+	size := len(m.Indexes)
+	indexes1 := make([]int, size)
+	indexes2 := make([]int, size)
+	copy(indexes1, m.Indexes)
+	copy(indexes2, m2.Indexes)
+	sort.Ints(indexes1)
+	sort.Ints(indexes2)
+
+	for i := range indexes1 {
+		if indexes1[i] != indexes2[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Clusters generates lvl2 clusters from matrix
@@ -120,7 +144,7 @@ func (m *Mtx) GenerateClusters() (clusters []*Cluster) {
 			Rate:    maxRate,
 		}
 
-		for nextVal, nextIndex := c.nextCandidate(cluster); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster) {
+		for nextVal, nextIndex := c.nextCandidate(cluster.Indexes); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster.Indexes) {
 			if !cluster.tryAdd(nextVal, nextIndex) {
 				break
 			}
@@ -131,9 +155,73 @@ func (m *Mtx) GenerateClusters() (clusters []*Cluster) {
 		for _, idx := range cluster.Indexes {
 			c.ExcludeRow(idx)
 		}
+
 		for i, idx := range cluster.Indexes {
 			cluster.Indexes[i] = c.Indexes[idx]
 		}
+		clusters = append(clusters, cluster)
+	}
+	return clusters
+}
+
+// Clusters generates lvl2 clusters from matrix
+func (m *Mtx) _GenerateClusters(a *arena.Arena) (clusters []*Cluster) {
+	mm := m.Clone()
+	for {
+		c := mm.Clone()
+		maxi, maxj, maxRate := c.max()
+		if maxi < 0 {
+			break
+		}
+
+		c.Values[maxi][maxj-maxi-1] = 0
+		cluster := &Cluster{
+			Indexes: []int{maxi, maxj},
+			Rate:    maxRate,
+		}
+		c.Exclude(maxi, maxj)
+
+		var nextVal float32
+		var nextIndex int
+		var negList = make([]*Cluster, 0)
+		lastOkCluster := cluster.clone()
+		for nextVal, nextIndex = c.nextCandidate(cluster.Indexes); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster.Indexes) {
+			newCluster := cluster.add(nextVal, nextIndex)
+			if newCluster.Volume() >= lastOkCluster.Volume() {
+				lastOkCluster = newCluster.clone()
+				negList = nil
+			} else {
+				negList = append(negList, newCluster)
+			}
+			cluster = newCluster
+
+			if len(negList) > 5 {
+				cluster = lastOkCluster
+				break
+			}
+
+			for _, idx := range cluster.Indexes {
+				c.Exclude(idx, nextIndex)
+			}
+		}
+		for _, idx := range cluster.Indexes {
+			mm.ExcludeRow(idx)
+		}
+
+		for i, idx := range cluster.Indexes {
+			cluster.Indexes[i] = c.Indexes[idx]
+		}
+
+		classes := a.Get(cluster.Indexes[0]).Classes()
+		if len(classes) > 0 {
+			if classes[0] == "catalog-grid__cell" {
+				fmt.Println(cluster.Rate)
+				//fmt.Println(len(cluster.Indexes))
+				//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-2], "vs", lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1])
+				//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1], "vs", m.FindIndexes(negList[0].Indexes)[len(negList[0].Indexes)-1])
+			}
+		}
+
 		clusters = append(clusters, cluster)
 	}
 	return clusters
@@ -155,13 +243,13 @@ func (m *Mtx) max() (maxI, maxJ int, val float32) {
 	return
 }
 
-func (m *Mtx) nextCandidate(c *Cluster) (float32, int) {
+func (m *Mtx) nextCandidate(currentIndexes []int) (float32, int) {
 	var maxCandidateRate float32 = .0
 	maxCandidateIdx := -1
 
-	candidateIndexes := m.candidates(c)
+	candidateIndexes := m.candidates(currentIndexes)
 	for _, candidateIndex := range candidateIndexes {
-		rate := m.rateCandidate(c, candidateIndex)
+		rate := m.rateCandidate(currentIndexes, candidateIndex)
 		if rate > maxCandidateRate {
 			maxCandidateRate = rate
 			maxCandidateIdx = candidateIndex
@@ -170,9 +258,9 @@ func (m *Mtx) nextCandidate(c *Cluster) (float32, int) {
 	return maxCandidateRate, maxCandidateIdx
 }
 
-func (m *Mtx) rateCandidate(c *Cluster, candidateIdx int) float32 {
+func (m *Mtx) rateCandidate(indexes []int, candidateIdx int) float32 {
 	var lowestVal float32
-	for _, memberIdx := range c.Indexes {
+	for _, memberIdx := range indexes {
 		v := m.Get(memberIdx, candidateIdx)
 		if v > 0 {
 			if lowestVal == 0 {
@@ -187,9 +275,18 @@ func (m *Mtx) rateCandidate(c *Cluster, candidateIdx int) float32 {
 	return lowestVal
 }
 
-func (m *Mtx) candidates(c *Cluster) (pairIdxs []int) {
+func hasIndex(idx int, indexes []int) bool{
+	for _, nextIdx := range indexes {
+		if nextIdx == idx {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Mtx) candidates(indexes []int) (pairIdxs []int) {
 	for i := range m.Indexes {
-		if !c.hasIndex(i) {
+		if !hasIndex(i, indexes) {
 			pairIdxs = append(pairIdxs, i)
 		}
 	}
