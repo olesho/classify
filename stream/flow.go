@@ -121,11 +121,5 @@ func (s *Storage) Find(idx1, idx2 int) float32 {
 			break
 		}
 	}
-
-	if i == -1 || j == -1 {
-		panic("still no?")
-		return 0
-	}
-
 	return c1.Get(i, j)
 }

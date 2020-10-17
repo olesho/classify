@@ -19,7 +19,8 @@ func (s *Storage) cmpChildren(idx1, idx2 int) float32 {
 			idx := (i1+1)*(i2+1) - 1
 			rc := s.getElemRate(idx1, idx2)
 			if rc > 0 {
-				rc += s.cmpChildren(idx1, idx2)
+				cv := s.cmpChildren(idx1, idx2)
+				rc += cv
 			}
 			rating[idx].Coincided = rc
 			rating[idx].Index1 = i1

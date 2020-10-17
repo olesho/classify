@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -58,6 +57,8 @@ var testDoc1 = `
 		</body>
 	</html>
 `
+
+
 //
 //func TestStorageShort(t *testing.T) {
 //	s := NewStorage()
@@ -122,31 +123,20 @@ func _hasEqualMtx(list []*Mtx, m2 *Mtx) bool {
 //	}
 //}
 //
-//func TestStorageSyncAsyncLong(t *testing.T) {
-//	syncS := NewStorage()
-//	err := syncS.LoadFile("../rozetka.html")
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	syncS.Run()
-//
-//	asyncS := NewStorage()
-//	err = asyncS.LoadFile("../rozetka.html")
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	asyncS.RunAsync()
-//
-//	if len(syncS.Clusters) != len(asyncS.Clusters) {
-//		t.Errorf("cluster count differ: %v vs %v", len(syncS.Clusters), len(asyncS.Clusters))
-//	}
-//
-//	for _, c1 := range asyncS.Clusters {
-//		if !_hasEqualMtx(syncS.Clusters, c1) {
-//			t.Error("missing matrix")
-//		}
-//	}
-//}
+func TestStorageSync(t *testing.T) {
+	syncS := NewStorage()
+	err := syncS.LoadFile("../rozetka.html")
+	if err != nil {
+		t.Error(err)
+	}
+	syncS.createMatrices()
+	syncS.compareInMatrices()
+	if syncS.NodeToCluster[5715] == syncS.NodeToCluster[6627] {
+		syncS.NodeToCluster[5715].save("li.mtx")
+	} else {
+		t.Error("clusters should be equal for selected node")
+	}
+}
 
 func TestCreateMatricesSyncAsync(t *testing.T) {
 	syncS := NewStorage()
@@ -170,39 +160,17 @@ func TestCreateMatricesSyncAsync(t *testing.T) {
 	}
 
 	syncS.compareInMatrices()
-	asyncS.compareInMatrices()
+	asyncS.compareInMatricesAsync()
 }
 
 func TestMtx(t *testing.T) {
 	s := NewStorage()
-	err := s.LoadFile("../rozetka.html")
+	err := s.LoadFile("./testDoc2.html")
 	if err != nil {
 		t.Error(err)
 	}
-	s.Run()
-	fmt.Println(s.Find(5715, 6627))
-
-	mtx := &Mtx{}
-	err = mtx.load("div.mtx")
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(mtx.Find(5715, 6627))
-
-	//s.__RunAsync()
-
-	//s.Clusters[len(s.Clusters)-1].save("fil.mtx")
-
-
-	//n1 := mtx.FindIdx(5715)
-	//n2 := mtx.FindIdx(6627)
-	//n3 := mtx.FindIdx(5211)
-	//
-	//v1 := mtx.Get(n1, n2) // 761.93854 ?
-	//v2 := mtx.Get(n2, n3) // 743.1493 ?
-	//fmt.Println(v1, v2)
-	//
-	//mtx.GenerateClustersEdit(s.Arena)
+	s.createMatricesAsync()
+	s.compareInMatricesAsync()
 
 	//clusters := mtx.GenerateClustersEdit(s.Arena)
 	//for _, c := range clusters {
@@ -231,4 +199,52 @@ func TestMtx(t *testing.T) {
 	//	//}
 	//	//fmt.Println(el)
 	//}
+}
+
+func TestSyncAsync1(t *testing.T) {
+	s1 := NewStorage()
+	err := s1.LoadFile("./testDoc1.html")
+	if err != nil {
+		t.Error(err)
+	}
+	s1.createMatricesAsync()
+	s1.compareInMatricesAsync()
+
+	s2 := NewStorage()
+	err = s2.LoadFile("./testDoc1.html")
+	if err != nil {
+		t.Error(err)
+	}
+	s2.createMatrices()
+	s2.compareInMatrices()
+
+	if s2.Find(62, 150) != s1.Find(62, 150) {
+		t.Error("Find(62, 150) error")
+	}
+	if s2.Find(63, 151) != s1.Find(63, 151) {
+		t.Error("Find(63, 151)")
+	}
+	if s2.Find(72, 151) != s1.Find(72, 151) {
+		t.Error("Find(72, 151)")
+	}
+}
+
+func TestSyncAsync2(t *testing.T) {
+	s1 := NewStorage()
+	err := s1.LoadFile("./testDoc2.html")
+	if err != nil {
+		t.Error(err)
+	}
+	s1.timer.Start()
+	s1.createMatricesAsync()
+	s1.compareInMatricesAsync()
+	clusters := s1.generateAllClustersAsync()
+	ids := s1.Arena.FindByAttr("class", "catalog-grid__cell  catalog-grid__cell_type_slim")
+	for _, c := range clusters {
+		if c.hasIndex(ids[0]) {
+			if len(c.Indexes) != 60 {
+				t.Error("wrong group generated")
+			}
+		}
+	}
 }

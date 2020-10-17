@@ -27,27 +27,52 @@ func (s *Storage) createMatricesAsync() {
 	s.timer.Check("elements compared")
 }
 
-func (s *Storage) compareInMatricesAsync() {
+func (s *Storage) compareInMatrixAsync(mtx *Mtx) {
+	nn := new(int32)
+	*nn = -1
 	wg := sync.WaitGroup{}
-	for _, mtx := range s.Clusters {
-		nn := new(int32)
-		*nn = -1
-		wg.Add(runtime.NumCPU())
-		for i := 0; i < runtime.NumCPU(); i++ {
-			go func(i int) {
-				n := int(atomic.AddInt32(nn, 1))
-				for n < len(mtx.Values) {
-					idx1 := mtx.Indexes[n]
-					for m, idx2 := range mtx.Indexes[n+1:] {
-						mtx.Values[n][m] += s.cmpChildren(idx1, idx2)
-					}
-					n = int(atomic.AddInt32(nn, 1))
+	wg.Add(runtime.NumCPU())
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func(dest *Mtx) {
+			n := int(atomic.AddInt32(nn, 1))
+			for n < len(dest.Values) {
+				idx1 := dest.Indexes[n]
+				for m, idx2 := range dest.Indexes[n+1:] {
+					childrenVal := s.cmpChildren(idx1, idx2)
+					dest.Values[n][m] += childrenVal
 				}
-				wg.Done()
-			}(i)
-		}
-		wg.Wait()
+				n = int(atomic.AddInt32(nn, 1))
+			}
+			wg.Done()
+		}(mtx)
 	}
+	wg.Wait()
+}
+
+func (s *Storage) compareInMatricesAsync() {
+	clusterDuplicates := make([]*Mtx, len(s.Clusters))
+	for j, mtx := range s.Clusters {
+		mtxClone := mtx.Clone()
+
+		//if mtxClone.FindIdx(6) > -1 {
+		//	fmt.Println()
+		//}
+
+		if 2*len(mtxClone.Indexes)*(len(mtxClone.Indexes)-1) > runtime.NumCPU() {
+			s.compareInMatrixAsync(mtxClone)
+		} else {
+			s.compareInMatrix(mtxClone)
+		}
+		clusterDuplicates[j] = mtxClone
+	}
+	s.Clusters = clusterDuplicates
+
+	for _, c := range s.Clusters {
+		for _, idx := range c.Indexes {
+			s.NodeToCluster[idx] = c
+		}
+	}
+
 	s.timer.Check("elements compared including children")
 }
 

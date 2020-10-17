@@ -8,13 +8,27 @@ func (s *Storage) createMatrices() {
 	s.timer.Check("elements compared")
 }
 
+func (s *Storage) compareInMatrix(mtx *Mtx) {
+	for n := 0; n < len(mtx.Values); n++ {
+		idx1 := mtx.Indexes[n]
+		for m, idx2 := range mtx.Indexes[n+1:] {
+			childrenVal := s.cmpChildren(idx1, idx2)
+			mtx.Values[n][m] += childrenVal
+		}
+	}
+}
+
 func (s *Storage) compareInMatrices() {
-	for _, mtx := range s.Clusters {
-		for n := 0; n < len(mtx.Values); n++ {
-			idx1 := mtx.Indexes[n]
-			for m, idx2 := range mtx.Indexes[n+1:] {
-				mtx.Values[n][m] += s.cmpChildren(idx1, idx2)
-			}
+	clusterDuplicates := make([]*Mtx, len(s.Clusters))
+	for j, mtx := range s.Clusters {
+		mtxClone := mtx.Clone()
+		s.compareInMatrix(mtxClone)
+		clusterDuplicates[j] = mtxClone
+	}
+	s.Clusters = clusterDuplicates
+	for _, c := range s.Clusters {
+		for _, idx := range c.Indexes {
+			s.NodeToCluster[idx] = c
 		}
 	}
 	s.timer.Check("elements compared including children")
