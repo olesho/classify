@@ -23,7 +23,7 @@ func main() {
 		log.Println(err)
 	}
 	history = strings.Split(string(bts), "\n")
-	engine = stream.NewEngine(&stream.EngineOpts{ NumCPU: 4 })
+	engine = stream.NewStorage()
 	for {
 		input := prompt.Input("> ", completer, prompt.OptionHistory(history))
 		history = append(history, input)

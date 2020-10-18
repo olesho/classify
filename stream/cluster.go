@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"fmt"
 	"github.com/olesho/classify/arena"
 	"golang.org/x/net/html"
 	"sort"
@@ -22,10 +21,6 @@ func (mtx *Mtx) FindIndexes(indexes []int) []int {
 }
 
 func (s *Storage) toTable(c *Cluster) Table {
-	if c.hasIndex(1217) {
-		fmt.Println()
-	}
-
 	templateArena := s.MergeAll(c, c.Indexes)
 	result := Table{
 		Arena:         s.Arena,

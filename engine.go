@@ -13,14 +13,12 @@ import (
 	"github.com/olesho/classify/stream"
 )
 
-var engine *stream.Engine
-var matrix *stream.Matrix
+var engine *stream.Storage
+var matrix []stream.Series
 
 func funcReset(command string) {
 	matrix = nil
-	engine = stream.NewEngine(&stream.EngineOpts{
-		NumCPU: 4,
-	})
+	engine = stream.NewStorage()
 }
 
 func funcClear(command string) {
@@ -40,8 +38,8 @@ func funcClear(command string) {
 func renderOutput(groupIdx int, render func(itemID int) []string) {
 	cols, _ := consolesize.GetConsoleSize()
 	bw := NewBlockWriter(cols+1, 1, 1)
-	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix.Matrix[groupIdx].Matrix)))
-	for i, series := range matrix.Matrix[groupIdx].Nonuniform().Matrix {
+	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].Matrix)))
+	for i, series := range matrix[groupIdx].Nonuniform().Matrix {
 		bw.Open(prompt.Brown, prompt.White, fmt.Sprintf("Group %v", i+1))
 		for itemIndex, item := range series {
 			subItems := render(item.Id)
@@ -59,14 +57,14 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 }
 
 func funcRun(command string) {
-	parts := runRule.FindStringSubmatch(command)
-	windowLength := 0
-	if len(parts) > 0 {
-		windowLength, _ = strconv.Atoi(parts[1])
-	}
-	engine.SetWindowSize(windowLength)
-	matrix = engine.Run()
-	fmt.Printf("succesfully loaded %v groups\n", len(matrix.Matrix))
+	//parts := runRule.FindStringSubmatch(command)
+	//windowLength := 0
+	//if len(parts) > 0 {
+	//	windowLength, _ = strconv.Atoi(parts[1])
+	//}
+	//engine.SetWindowSize(windowLength)
+	matrix = engine.RunAsync()
+	fmt.Printf("succesfully loaded %v groups\n", len(matrix))
 }
 
 func funcShow(command string) {
@@ -74,7 +72,7 @@ func funcShow(command string) {
 		matrix = engine.Run()
 		fmt.Printf("succesfully loaded %v groups\n" +
 			"" +
-			"", len(matrix.Matrix))
+			"", len(matrix))
 	}
 	if matrix != nil {
 		parts := showRule.FindStringSubmatch(command)
@@ -84,7 +82,7 @@ func funcShow(command string) {
 				dataType = parts[1]
 			}
 			idx, _ := strconv.Atoi(parts[len(parts)-1])
-			if idx < len(matrix.Matrix) {
+			if idx < len(matrix) {
 				switch dataType {
 				case "elem":
 					renderOutput(idx, func(itemID int) []string {
@@ -104,13 +102,13 @@ func funcShow(command string) {
 						return engine.Arena.StringifyInformation(itemID)
 					})
 				case "info":
-					fmt.Println(engine.Arena.Chain(matrix.Matrix[idx].Matrix[0][0].Id, 0).XPath())
-					fmt.Printf("rows in group: %v\n", len(matrix.Matrix[idx].Matrix))
-					fmt.Printf("nodes in cluster: %v\n", len(matrix.Matrix[idx].Group.Clusters))
-					fmt.Printf("group volume: %v\n", matrix.Matrix[idx].Group.GroupVolume)
-					fmt.Printf("group size: %v\n", matrix.Matrix[idx].Group.Size)
-					fmt.Printf("volume: %v\n", matrix.Matrix[idx].Group.Volume)
-					fmt.Printf("wholesome volume: %v\n", matrix.Matrix[idx].Group.WholesomeVolume)
+					fmt.Println(engine.Arena.Chain(matrix[idx].Matrix[0][0].Id, 0).XPath())
+					fmt.Printf("rows in group: %v\n", len(matrix[idx].Matrix))
+					fmt.Printf("nodes in cluster: %v\n", len(matrix[idx].Group.Clusters))
+					fmt.Printf("group volume: %v\n", matrix[idx].Group.GroupVolume)
+					fmt.Printf("group size: %v\n", matrix[idx].Group.Size)
+					fmt.Printf("volume: %v\n", matrix[idx].Group.Volume)
+					fmt.Printf("wholesome volume: %v\n", matrix[idx].Group.WholesomeVolume)
 				}
 			}
 		}

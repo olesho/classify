@@ -5,6 +5,7 @@ import (
 	"github.com/olesho/classify/arena"
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
+	"io"
 	"os"
 	"strings"
 )
@@ -55,6 +56,16 @@ func NewStorage() *Storage {
 		ElementComparator: comparator.NewElementComparator(a),
 		timer: NewTimer(),
 	}
+}
+
+// Load appends HTML file content from reader
+func (s *Storage) Load(r io.Reader) error {
+	n, err := html.Parse(r)
+	if err != nil {
+		return err
+	}
+	s.Arena.Append(*n)
+	return nil
 }
 
 // LoadFile appends HTML file content

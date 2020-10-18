@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -174,47 +173,10 @@ func TestMtx(t *testing.T) {
 	s.createMatricesAsync()
 	s.compareInMatricesAsync()
 	clusters := s.generateAllClustersAsync()
-	for _, c := range clusters {
-		if len(c.Indexes) == 60 {
-			table := s.toTable(c)
-			fmt.Println(table)
-		}
+	first := s.clustersToMatrix(clusters)[0]
+	if first.Group.Size != 60 {
+		t.Error("wrong first group size")
 	}
-
-	series := s.clustersToMatrix(clusters)
-
-	for _, item := range series {
-		if item.Group.Size == 60 {
-			for _, cluster := range item.Group.Clusters {
-				for _, field := range cluster.Fields {
-					fmt.Println(field)
-				}
-			}
-		}
-	}
-
-	//for _, mtx := range s.Clusters {
-	//	if mtx.FindIdx(s.Arena.FindByAttr("class", "catalog-grid__cell  catalog-grid__cell_type_slim")[0]) > -1 {
-	//		//clusters := mtx._GenerateClusters(s.Arena)
-	//		clusters := mtx._GenerateClusters(s.Arena)
-	//		filtered := []*Cluster{}
-	//		for _, c := range clusters {
-	//			//fmt.Println(s.Arena.List[c.Indexes[0]].Classes())
-	//			if s.Arena.List[c.Indexes[0]].HasClass("catalog-grid__cell_type_slim") {
-	//				fmt.Println("before", len(c.Indexes))
-	//				filtered = append(filtered, c)
-	//			}
-	//		}
-	//
-	//		clusters = s.consolidateAll(filtered)
-	//		for _, c := range clusters {
-	//			//fmt.Println(s.Arena.List[c.Indexes[0]].Classes())
-	//			if s.Arena.List[c.Indexes[0]].HasClass("catalog-grid__cell_type_slim") {
-	//				fmt.Println("after", len(c.Indexes))
-	//			}
-	//		}
-	//	}
-	//}
 }
 
 func TestSyncAsync1(t *testing.T) {
@@ -242,25 +204,5 @@ func TestSyncAsync1(t *testing.T) {
 	}
 	if s2.Find(72, 151) != s1.Find(72, 151) {
 		t.Error("Find(72, 151)")
-	}
-}
-
-func TestSyncAsync2(t *testing.T) {
-	s1 := NewStorage()
-	err := s1.LoadFile("./testDoc2.html")
-	if err != nil {
-		t.Error(err)
-	}
-	s1.timer.Start()
-	s1.createMatricesAsync()
-	s1.compareInMatricesAsync()
-	clusters := s1.generateAllClustersAsync()
-	ids := s1.Arena.FindByAttr("class", "catalog-grid__cell  catalog-grid__cell_type_slim")
-	for _, c := range clusters {
-		if c.hasIndex(ids[0]) {
-			if len(c.Indexes) != 60 {
-				t.Error("wrong group generated")
-			}
-		}
 	}
 }
