@@ -2,7 +2,6 @@ package stream
 
 import (
 	"encoding/gob"
-	"fmt"
 	"github.com/olesho/classify/arena"
 	"os"
 	"sort"
@@ -212,21 +211,20 @@ func (m *Mtx) _GenerateClusters(a *arena.Arena) (clusters []*Cluster) {
 			cluster.Indexes[i] = c.Indexes[idx]
 		}
 
-		classes := a.Get(cluster.Indexes[0]).Classes()
-		if len(classes) > 0 {
-			if classes[0] == "catalog-grid__cell" {
-				fmt.Println(cluster.Rate)
-				//fmt.Println(len(cluster.Indexes))
-				//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-2], "vs", lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1])
-				//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1], "vs", m.FindIndexes(negList[0].Indexes)[len(negList[0].Indexes)-1])
-			}
-		}
+		//classes := a.Get(cluster.Indexes[0]).Classes()
+		//if len(classes) > 0 {
+		//	if classes[0] == "catalog-grid__cell" {
+		//		fmt.Println(cluster.Rate)
+		//		//fmt.Println(len(cluster.Indexes))
+		//		//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-2], "vs", lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1])
+		//		//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1], "vs", m.FindIndexes(negList[0].Indexes)[len(negList[0].Indexes)-1])
+		//	}
+		//}
 
 		clusters = append(clusters, cluster)
 	}
 	return clusters
 }
-
 
 func (m *Mtx) max() (maxI, maxJ int, val float32) {
 	maxI = -1

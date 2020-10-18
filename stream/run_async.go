@@ -86,7 +86,8 @@ func (s *Storage) generateAllClustersAsync() []*Cluster {
 		go func() {
 			idx := int(atomic.AddInt32(index, 1))
 			for idx < len(s.Clusters) {
-				clusters  = append(clusters, s.Clusters[idx].GenerateClusters()...)
+				generated := s.Clusters[idx].GenerateClusters()
+				clusters  = append(clusters, generated...)
 				idx = int(atomic.AddInt32(index, 1))
 			}
 			wg.Done()
@@ -97,7 +98,7 @@ func (s *Storage) generateAllClustersAsync() []*Cluster {
 	return clusters
 }
 
-func (s *Storage) clustersToMatrix(clusters []*Cluster) *Matrix {
+func (s *Storage) clustersToMatrix(clusters []*Cluster) []Series {
 	tables := make([]Table, len(clusters))
 	for i, cluster := range clusters {
 		tables[i] = s.toTable(cluster)
@@ -109,11 +110,9 @@ func (s *Storage) clustersToMatrix(clusters []*Cluster) *Matrix {
 	})
 
 	// transpose
-	rm := &Matrix{
-		Matrix: make([]Series, len(clusterGroups)),
-	}
+	rm := make([]Series, len(clusterGroups))
 	for i, g := range clusterGroups {
-		rm.Matrix[i] = Series{
+		rm[i] = Series{
 			Matrix: transpose(g),
 			Arena:  s.Arena,
 			Group:  g,
@@ -125,7 +124,7 @@ func (s *Storage) clustersToMatrix(clusters []*Cluster) *Matrix {
 	return rm
 }
 
-func (s *Storage) RunAsync() *Matrix {
+func (s *Storage) RunAsync() []Series {
 	s.timer.Start()
 	s.createMatricesAsync()
 	s.compareInMatricesAsync()

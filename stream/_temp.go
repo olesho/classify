@@ -174,3 +174,45 @@ func (s *Storage) _next(idx int) {
 	}
 }
 
+func (s *Storage) _consolidate(cluster1, cluster2 *Cluster) *Cluster {
+	var minVal float32 = s.Find(cluster1.Indexes[0], cluster2.Indexes[0])
+	for _, i1 := range cluster1.Indexes {
+		for _, i2 := range cluster2.Indexes {
+			if val := s.Find(i1, i2); val < minVal {
+				minVal = val
+			}
+		}
+	}
+	newVolume := float32(len(cluster1.Indexes) + len(cluster2.Indexes)) * minVal
+	vol1 := cluster1.Volume()
+	vol2 := cluster2.Volume()
+	if vol1 + vol2 < newVolume {
+		//if cluster1.Volume() < newVolume || cluster2.Volume() < newVolume {
+		return &Cluster{
+			Indexes: append(cluster1.Indexes, cluster2.Indexes...),
+			Rate: minVal,
+		}
+	}
+	return nil
+}
+
+func (s *Storage) _consolidateAll(clusters []*Cluster) []*Cluster {
+	for i := range clusters {
+		for j := i+1; j < len(clusters); j++ {
+			if clusters[i] != nil && clusters[j] != nil {
+				if newCluster:= s._consolidate(clusters[i], clusters[j]); newCluster != nil {
+					clusters[i] = newCluster
+					clusters[j] = nil
+				}
+			}
+		}
+	}
+
+	filteredClusters := make([]*Cluster, 0)
+	for _, c := range clusters {
+		if c != nil {
+			filteredClusters = append(filteredClusters, c)
+		}
+	}
+	return filteredClusters
+}

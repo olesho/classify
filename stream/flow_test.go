@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -169,35 +170,50 @@ func TestMtx(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	s.timer.Start()
 	s.createMatricesAsync()
 	s.compareInMatricesAsync()
+	clusters := s.generateAllClustersAsync()
+	for _, c := range clusters {
+		if len(c.Indexes) == 60 {
+			table := s.toTable(c)
+			fmt.Println(table)
+		}
+	}
 
-	//clusters := mtx.GenerateClustersEdit(s.Arena)
-	//for _, c := range clusters {
-	//	idx := c.Indexes[0]
-	//	classes := s.Arena.Get(idx).Classes()
-	//	class := ""
-	//	if len(classes) > 0 {
-	//		class = classes[0]
-	//	}
-	//	if class == "catalog-grid__cell" {
-	//		//fmt.Println(len(c.Indexes), c.Rate)
-	//		fmt.Println(c.Indexes)
-	//	}
+	series := s.clustersToMatrix(clusters)
+
+	for _, item := range series {
+		if item.Group.Size == 60 {
+			for _, cluster := range item.Group.Clusters {
+				for _, field := range cluster.Fields {
+					fmt.Println(field)
+				}
+			}
+		}
+	}
+
+	//for _, mtx := range s.Clusters {
+	//	if mtx.FindIdx(s.Arena.FindByAttr("class", "catalog-grid__cell  catalog-grid__cell_type_slim")[0]) > -1 {
+	//		//clusters := mtx._GenerateClusters(s.Arena)
+	//		clusters := mtx._GenerateClusters(s.Arena)
+	//		filtered := []*Cluster{}
+	//		for _, c := range clusters {
+	//			//fmt.Println(s.Arena.List[c.Indexes[0]].Classes())
+	//			if s.Arena.List[c.Indexes[0]].HasClass("catalog-grid__cell_type_slim") {
+	//				fmt.Println("before", len(c.Indexes))
+	//				filtered = append(filtered, c)
+	//			}
+	//		}
 	//
-	//	//el := make([]string, len(c.Indexes))
-	//	//for i, idx := range c.Indexes {
-	//	//	classes := s.Arena.Get(idx).Classes()
-	//	//	class := ""
-	//	//	if len(classes) > 0 {
-	//	//		class = classes[0]
-	//	//	}
-	//	//	el[i] = fmt.Sprintf("%v-%v", idx, class)
-	//	//	if class == "catalog-grid__cell" {
-	//	//		fmt.Println(len(c.Indexes), c.Rate)
-	//	//	}
-	//	//}
-	//	//fmt.Println(el)
+	//		clusters = s.consolidateAll(filtered)
+	//		for _, c := range clusters {
+	//			//fmt.Println(s.Arena.List[c.Indexes[0]].Classes())
+	//			if s.Arena.List[c.Indexes[0]].HasClass("catalog-grid__cell_type_slim") {
+	//				fmt.Println("after", len(c.Indexes))
+	//			}
+	//		}
+	//	}
 	//}
 }
 

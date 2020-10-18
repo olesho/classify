@@ -111,6 +111,7 @@ func imgsVolume(strs []string) float32 {
 	return r
 }
 
+// WholesomeGroupFields checks each template arena node for valid field info; if found checks whole group of fields
 func (c *Table) WholesomeGroupFields() []Field {
 	result := make([]Field, 0)
 	for _, n := range c.TemplateArena.List {
@@ -126,6 +127,7 @@ func (c *Table) WholesomeGroupFields() []Field {
 	return result
 }
 
+// extractFields extracts all field values for certain type
 func extractFields(arena *arena.Arena, ids []int, fieldType int) *Field {
 	values := &Field{}
 	values.Content = make([]string, len(ids))
@@ -141,6 +143,7 @@ func extractFields(arena *arena.Arena, ids []int, fieldType int) *Field {
 	return nil
 }
 
+// WholesomeInfo extracts field value and type
 func WholesomeInfo(n *arena.Node) (string, int) {
 	if n.Type == html.TextNode {
 		return strings.TrimSpace(n.Data), TextField

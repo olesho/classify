@@ -43,7 +43,7 @@ func (s *Storage) generateAllClusters() []*Cluster {
 	return clusters
 }
 
-func (s *Storage) Run() *Matrix {
+func (s *Storage) Run() []Series {
 	s.timer.Start()
 	s.createMatrices()
 	s.compareInMatrices()

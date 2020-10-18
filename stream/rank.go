@@ -6,14 +6,14 @@ import (
 	"github.com/olesho/classify/arena"
 )
 
-type Row []*arena.Node
+type Nodes []*arena.Node
 
-type Matrix struct {
-	Matrix []Series
-}
+//type Matrix struct {
+//	Matrix []Series
+//}
 
 type Series struct {
-	Matrix []Row
+	Matrix []Nodes
 	Arena  *arena.Arena
 	Group  *ClusterGroup
 	//Volume float32
@@ -32,7 +32,7 @@ func (m *Series) isFieldUniform(index int) bool {
 }
 
 func (m *Series) Uniform() *Series {
-	result := &Series{Arena: m.Arena, Matrix: make([]Row, len(m.Matrix))}
+	result := &Series{Arena: m.Arena, Matrix: make([]Nodes, len(m.Matrix))}
 	uniformity := make([]bool, len(m.Matrix[0]))
 	for i := 0; i < len(m.Matrix[0]); i++ {
 		uniformity[i] = m.isFieldUniform(i)
@@ -50,7 +50,7 @@ func (m *Series) Uniform() *Series {
 }
 
 func (m *Series) Nonuniform() *Series {
-	result := &Series{Arena: m.Arena, Matrix: make([]Row, len(m.Matrix))}
+	result := &Series{Arena: m.Arena, Matrix: make([]Nodes, len(m.Matrix))}
 	uniformity := make([]bool, len(m.Matrix[0]))
 	for i := 0; i < len(m.Matrix[0]); i++ {
 		uniformity[i] = m.isFieldUniform(i)
@@ -80,11 +80,11 @@ func (s *Series) String() string {
 	return result
 }
 
-func transpose(group *ClusterGroup) []Row {
+func transpose(group *ClusterGroup) []Nodes {
 	size := len(group.Clusters[0].Members)
-	newGroup := make([]Row, size)
+	newGroup := make([]Nodes, size)
 	for i := 0; i < size; i++ {
-		row := Row{}
+		row := Nodes{}
 		for _, bag := range group.Clusters {
 			row = append(row, bag.Members[i])
 		}
