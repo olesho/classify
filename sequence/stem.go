@@ -1,10 +1,11 @@
 package sequence
 
 import (
-	"github.com/olesho/classify/arena"
 	"github.com/olesho/classify/comparator"
+	"runtime"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type ending struct {
@@ -23,19 +24,41 @@ type StemCluster struct {
 
 	clusters []*CrownCluster
 
-	arena *arena.Arena
 	strictComparator comparator.Comparator
 	elementComparator comparator.Comparator
-	root comparator.Comparator
-
-	m sync.Mutex
+	root *RootCluster
 }
 
 func (c *StemCluster) addWithCrown(indexI, index int) {
-	values := make([]float32, len(c.indexes))
-	for i, nextIndex := range c.indexes {
-		values[i] = c.GetStem(i, indexI) + c.root.Cmp(nextIndex, index)
+	//values := make([]float32, len(c.indexes))
+
+	var values []float32
+	if len(c.indexes) >= c.root.limit {
+		values = make([]float32, c.root.limit)
+	} else {
+		values = make([]float32, len(c.indexes))
 	}
+
+	//async
+	atomicIndex := new(int32)
+	*atomicIndex = -1
+	wg := sync.WaitGroup{}
+	wg.Add(runtime.NumCPU())
+	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+		go func() {
+			for i := int(atomic.AddInt32(atomicIndex, 1)); i < len(values); i = int(atomic.AddInt32(atomicIndex, 1)) {
+				values[i] = c.GetStem(i, indexI) + c.root.Cmp(c.indexes[i], index)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	// sync
+	//for i := range values {
+	//	values[i] = c.GetStem(i, indexI) + c.root.Cmp(c.indexes[i], index)
+	//}
+
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
 
@@ -63,9 +86,6 @@ func (c *StemCluster) addWithCrown(indexI, index int) {
 }
 
 func (c *StemCluster) Notify(index int) {
-	//c.m.Lock()
-	//defer c.m.Unlock()
-
 	if len(c.endings) > 0 {
 		if index > c.endings[0].last {
 			c.addWithCrown(c.endings[0].i, c.endings[0].index)
@@ -77,15 +97,20 @@ func (c *StemCluster) Notify(index int) {
 func (c *StemCluster) AddFirst(index int) bool {
 	c.stemIndexes = []int{index}
 	c.stemValues = make([][]float32, 1)
-	last := c.arena.Get(index).Ext.(*Additional).LastDescendant
+	last := c.root.arena.Get(index).Ext.(*Additional).LastDescendant
 	if index == last {
-		c.addWithCrown(0, index)
+		//same as c.addWithCrown(0, index)
+		c.clusters = append(c.clusters, &CrownCluster{
+			indexes: []int{index},
+			rate:    1,
+			stem:    c,
+		})
 	} else {
 		c.endings = []ending{
 			{
 				i:     0,
 				index: index,
-				last:  c.arena.Get(index).Ext.(*Additional).LastDescendant,
+				last:  c.root.arena.Get(index).Ext.(*Additional).LastDescendant,
 			},
 		}
 	}
@@ -93,9 +118,6 @@ func (c *StemCluster) AddFirst(index int) bool {
 }
 
 func (c *StemCluster) Add(index int) bool {
-	//c.m.Lock()
-	//defer c.m.Unlock()
-
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		values := make([]float32, len(c.stemIndexes))
 		for i, existingIdx := range c.stemIndexes {
@@ -110,7 +132,7 @@ func (c *StemCluster) Add(index int) bool {
 		c.endings = append(c.endings, ending{
 			i:     len(c.stemIndexes)-1,
 			index: index,
-			last:  c.arena.Get(index).Ext.(*Additional).LastDescendant,
+			last:  c.root.arena.Get(index).Ext.(*Additional).LastDescendant,
 		})
 		sort.Slice(c.endings, func(i, j int) bool {
 			return c.endings[i].last > c.endings[j].last
@@ -148,8 +170,14 @@ func (c *StemCluster) FindStem(idx1, idx2 int) float32 {
 
 func (c *StemCluster) Get(i, j int) float32 {
 	if i < j {
+		if i >= len(c.values[j]) {
+			return 0
+		}
 		return c.values[j][i]
 	} else if j < i {
+		if j >= len(c.values[i]) {
+			return 0
+		}
 		return c.values[i][j]
 	}
 	return 0

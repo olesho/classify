@@ -80,7 +80,7 @@ func TestRootCluster_Batch(t *testing.T) {
 func TestRootCluster_LoadFile(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()
-	err := r.LoadFile("testDoc2.html")
+	err := r.LoadFile("../rozetka.html")
 	a.NoError(err)
 
 	r.Batch()
@@ -103,5 +103,5 @@ func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	err = r.LoadFile("../rozetka3.html")
 	a.NoError(err)
 
-	r.BatchAsync()
+	r.Batch()
 }

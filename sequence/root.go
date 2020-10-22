@@ -7,14 +7,13 @@ import (
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 type RootCluster struct {
+	limit int
+
 	clusters []*StemCluster
 	nodeIDToCluster []*StemCluster
 
@@ -26,6 +25,7 @@ type RootCluster struct {
 func NewRootCluster() *RootCluster {
 	a := arena.NewArena()
 	return &RootCluster{
+		limit: 99999999,
 		arena: a,
 		strictComparator: comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
@@ -34,11 +34,9 @@ func NewRootCluster() *RootCluster {
 
 func (rs *RootCluster) newStemCluster(index int) *StemCluster {
 	sc := &StemCluster{
-		arena:             rs.arena,
 		strictComparator:  rs.strictComparator,
 		elementComparator: rs.elementComparator,
 		root: rs,
-		m: sync.Mutex{},
 	}
 	sc.AddFirst(index)
 	return sc
@@ -70,27 +68,6 @@ func (rs *RootCluster) LoadString(str string) error {
 	return nil
 }
 
-func (rs *RootCluster) BatchAsync() {
-	Init(rs.arena)
-	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
-
-	atomicIndex := new(int32)
-	*atomicIndex = -1
-	wg := sync.WaitGroup{}
-	wg.Add(runtime.NumCPU())
-	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-		go func() {
-			for i := int(atomic.AddInt32(atomicIndex, 1)); i < len(rs.arena.List); i = int(atomic.AddInt32(atomicIndex, 1)) {
-				rs.Add(i)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	rs.notifyAll()
-}
-
 func (rs *RootCluster) Batch() {
 	Init(rs.arena)
 	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
@@ -108,25 +85,9 @@ func (rs *RootCluster) notifyAll() {
 
 //func (rs *RootCluster) Rate(index int) float32 { return 0 }
 func (rs *RootCluster) Add(index int) bool {
-	//if len(rs.clusters) < runtime.NumCPU() {
-	//	for _, cluster := range rs.clusters {
-	//		cluster.Notify(index)
-	//	}
-	//} else {
-	atomicIndex := new(int32)
-	*atomicIndex = -1
-	wg := sync.WaitGroup{}
-	wg.Add(runtime.NumCPU())
-	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-		go func() {
-			for i := int(atomic.AddInt32(atomicIndex, 1)); i < len(rs.clusters); i = int(atomic.AddInt32(atomicIndex, 1)) {
-				rs.clusters[i].Notify(index)
-			}
-			wg.Done()
-		}()
+	for _, cluster := range rs.clusters {
+		cluster.Notify(index)
 	}
-	wg.Wait()
-	//}
 
 	// try add into one of existing bags
 	var i int

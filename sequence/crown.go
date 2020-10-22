@@ -1,6 +1,8 @@
 package sequence
 
-import "strings"
+import (
+	"strings"
+)
 
 type CrownCluster struct {
 	indexes []int
@@ -11,7 +13,7 @@ type CrownCluster struct {
 func (c *CrownCluster) String() string {
 	r := make([]string, len(c.indexes))
 	for i, index := range c.indexes {
-		r[i] = c.stem.arena.StringifyNode(index)
+		r[i] = c.stem.root.arena.StringifyNode(index)
 	}
 	return strings.Join(r, " ")
 }
@@ -42,7 +44,7 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 				lowestVal = v
 			}
 		} else {
-			return 0
+			//return 0
 		}
 	}
 	return lowestVal
