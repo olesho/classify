@@ -7,8 +7,10 @@ import (
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type RootCluster struct {
@@ -20,6 +22,8 @@ type RootCluster struct {
 	arena *arena.Arena
 	strictComparator comparator.Comparator
 	elementComparator comparator.Comparator
+
+	notify chan [2]int
 }
 
 func NewRootCluster() *RootCluster {
@@ -29,6 +33,7 @@ func NewRootCluster() *RootCluster {
 		arena: a,
 		strictComparator: comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
+		notify: make(chan [2]int),
 	}
 }
 
@@ -37,6 +42,8 @@ func (rs *RootCluster) newStemCluster(index int) *StemCluster {
 		strictComparator:  rs.strictComparator,
 		elementComparator: rs.elementComparator,
 		root: rs,
+
+		m: sync.Mutex{},
 	}
 	sc.AddFirst(index)
 	return sc
@@ -71,22 +78,43 @@ func (rs *RootCluster) LoadString(str string) error {
 func (rs *RootCluster) Batch() {
 	Init(rs.arena)
 	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
+	rs.consumeNotifications()
 	for i := range rs.arena.List {
 		rs.Add(i)
 	}
 	rs.notifyAll()
 }
 
+func (rs *RootCluster) consumeNotifications() {
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func(){
+			for pair := range rs.notify {
+				c := rs.clusters[pair[0]]
+				index := pair[1]
+
+				c.m.Lock()
+				if len(c.endings) > 0 {
+					if index > c.endings[0].last {
+						c.addWithCrown(c.endings[0].i, c.endings[0].index)
+						c.endings = c.endings[1:]
+					}
+				}
+				c.m.Unlock()
+			}
+		}()
+	}
+}
+
 func (rs *RootCluster) notifyAll() {
-	for _, cluster := range rs.clusters {
-		cluster.Notify(len(rs.arena.List))
+	for i := range rs.clusters {
+		rs.notify <- [2]int{i, len(rs.arena.List)}
 	}
 }
 
 //func (rs *RootCluster) Rate(index int) float32 { return 0 }
 func (rs *RootCluster) Add(index int) bool {
-	for _, cluster := range rs.clusters {
-		cluster.Notify(index)
+	for i := range rs.clusters {
+		rs.notify <- [2]int{i, index}
 	}
 
 	// try add into one of existing bags

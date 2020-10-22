@@ -27,6 +27,8 @@ type StemCluster struct {
 	strictComparator comparator.Comparator
 	elementComparator comparator.Comparator
 	root *RootCluster
+
+	m sync.Mutex
 }
 
 func (c *StemCluster) addWithCrown(indexI, index int) {
@@ -129,6 +131,8 @@ func (c *StemCluster) Add(index int) bool {
 		}
 		c.stemIndexes = append(c.stemIndexes, index)
 		c.stemValues = append(c.stemValues, values)
+
+		c.m.Lock()
 		c.endings = append(c.endings, ending{
 			i:     len(c.stemIndexes)-1,
 			index: index,
@@ -137,6 +141,7 @@ func (c *StemCluster) Add(index int) bool {
 		sort.Slice(c.endings, func(i, j int) bool {
 			return c.endings[i].last > c.endings[j].last
 		})
+		c.m.Unlock()
 		return true
 	}
 	return false
