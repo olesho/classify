@@ -2,7 +2,6 @@ package stream
 
 import (
 	"encoding/gob"
-	"github.com/olesho/classify/arena"
 	"os"
 	"sort"
 	"sync"
@@ -11,9 +10,8 @@ import (
 type Mtx struct {
 	Indexes []int
 	Values [][]float32
+	Clusters []*Cluster
 	mutex sync.Mutex
-
-	//_s *Storage
 }
 
 func init() {
@@ -53,15 +51,6 @@ func (m *Mtx) Find(idx1, idx2 int) float32 {
 			break
 		}
 	}
-
-	//if i == -1 || j == -1 {
-	//	fmt.Printf("indexes not found: %vx%v\n", idx1, idx2)
-	//	fmt.Printf("indexes belong to same group: %v\n", m._s.NodeToCluster[idx1] == m._s.NodeToCluster[idx1])
-	//	fmt.Printf("actual group: %v\n", m._s.NodeToCluster[idx1] == m)
-	//	fmt.Printf("group contain: %v and %v\n", m._s.NodeToCluster[idx1].HasIdx(idx1), m._s.NodeToCluster[idx1].HasIdx(idx2))
-	//	return 0
-	//}
-
 	return m.Get(i, j)
 }
 
@@ -158,69 +147,6 @@ func (m *Mtx) GenerateClusters() (clusters []*Cluster) {
 		for i, idx := range cluster.Indexes {
 			cluster.Indexes[i] = c.Indexes[idx]
 		}
-		clusters = append(clusters, cluster)
-	}
-	return clusters
-}
-
-// Clusters generates lvl2 clusters from matrix
-func (m *Mtx) _GenerateClusters(a *arena.Arena) (clusters []*Cluster) {
-	mm := m.Clone()
-	for {
-		c := mm.Clone()
-		maxi, maxj, maxRate := c.max()
-		if maxi < 0 {
-			break
-		}
-
-		c.Values[maxi][maxj-maxi-1] = 0
-		cluster := &Cluster{
-			Indexes: []int{maxi, maxj},
-			Rate:    maxRate,
-		}
-		c.Exclude(maxi, maxj)
-
-		var nextVal float32
-		var nextIndex int
-		var negList = make([]*Cluster, 0)
-		lastOkCluster := cluster.clone()
-		for nextVal, nextIndex = c.nextCandidate(cluster.Indexes); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster.Indexes) {
-			newCluster := cluster.add(nextVal, nextIndex)
-			if newCluster.Volume() >= lastOkCluster.Volume() {
-				lastOkCluster = newCluster.clone()
-				negList = nil
-			} else {
-				negList = append(negList, newCluster)
-			}
-			cluster = newCluster
-
-			if len(negList) > 5 {
-				cluster = lastOkCluster
-				break
-			}
-
-			for _, idx := range cluster.Indexes {
-				c.Exclude(idx, nextIndex)
-			}
-		}
-		for _, idx := range cluster.Indexes {
-			mm.ExcludeRow(idx)
-		}
-
-		for i, idx := range cluster.Indexes {
-			cluster.Indexes[i] = c.Indexes[idx]
-		}
-
-		//classes := a.Get(cluster.Indexes[0]).Classes()
-		//if len(classes) > 0 {
-		//	if classes[0] == "catalog-grid__cell" {
-		//		fmt.Println(cluster.Rate)
-		//		//fmt.Println(len(cluster.Indexes))
-		//		//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-2], "vs", lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1])
-		//		//fmt.Println(lastOkCluster.Indexes[len(lastOkCluster.Indexes)-1], "vs", m.FindIndexes(negList[0].Indexes)[len(negList[0].Indexes)-1])
-		//	}
-		//}
-
 		clusters = append(clusters, cluster)
 	}
 	return clusters

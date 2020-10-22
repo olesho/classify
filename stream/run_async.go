@@ -53,11 +53,6 @@ func (s *Storage) compareInMatricesAsync() {
 	clusterDuplicates := make([]*Mtx, len(s.Clusters))
 	for j, mtx := range s.Clusters {
 		mtxClone := mtx.Clone()
-
-		//if mtxClone.FindIdx(6) > -1 {
-		//	fmt.Println()
-		//}
-
 		if 2*len(mtxClone.Indexes)*(len(mtxClone.Indexes)-1) > runtime.NumCPU() {
 			s.compareInMatrixAsync(mtxClone)
 		} else {

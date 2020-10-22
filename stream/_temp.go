@@ -216,3 +216,56 @@ func (s *Storage) _consolidateAll(clusters []*Cluster) []*Cluster {
 	}
 	return filteredClusters
 }
+
+
+// Clusters generates lvl2 clusters from matrix
+func (m *Mtx) _GenerateClusters(a *arena.Arena) (clusters []*Cluster) {
+	mm := m.Clone()
+	for {
+		c := mm.Clone()
+		maxi, maxj, maxRate := c.max()
+		if maxi < 0 {
+			break
+		}
+
+		c.Values[maxi][maxj-maxi-1] = 0
+		cluster := &Cluster{
+			Indexes: []int{maxi, maxj},
+			Rate:    maxRate,
+		}
+		c.Exclude(maxi, maxj)
+
+		var nextVal float32
+		var nextIndex int
+		var negList = make([]*Cluster, 0)
+		lastOkCluster := cluster.clone()
+		for nextVal, nextIndex = c.nextCandidate(cluster.Indexes); nextIndex > -1; nextVal, nextIndex = c.nextCandidate(cluster.Indexes) {
+			newCluster := cluster.add(nextVal, nextIndex)
+			if newCluster.Volume() >= lastOkCluster.Volume() {
+				lastOkCluster = newCluster.clone()
+				negList = nil
+			} else {
+				negList = append(negList, newCluster)
+			}
+			cluster = newCluster
+
+			if len(negList) > 5 {
+				cluster = lastOkCluster
+				break
+			}
+
+			for _, idx := range cluster.Indexes {
+				c.Exclude(idx, nextIndex)
+			}
+		}
+		for _, idx := range cluster.Indexes {
+			mm.ExcludeRow(idx)
+		}
+
+		for i, idx := range cluster.Indexes {
+			cluster.Indexes[i] = c.Indexes[idx]
+		}
+		clusters = append(clusters, cluster)
+	}
+	return clusters
+}
