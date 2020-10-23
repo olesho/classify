@@ -2,8 +2,10 @@ package sequence
 
 import (
 	"github.com/olesho/classify/comparator"
+	"runtime"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type ending struct {
@@ -37,27 +39,27 @@ func (c *StemCluster) addWithCrown(i, index int) {
 		values = make([]float32, len(c.indexes))
 	}
 
-	////async
-	//atomicIndex := new(int32)
-	//*atomicIndex = -1
-	//wg := sync.WaitGroup{}
-	//wg.Add(runtime.NumCPU())
-	//for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-	//	go func() {
-	//		for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
-	//			j := len(c.indexes) - valueIndex - 1
-	//			values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
-	//		}
-	//		wg.Done()
-	//	}()
-	//}
-	//wg.Wait()
-
-	//sync
-	for valueIndex := range values {
-		j := len(c.indexes) - valueIndex - 1
-		values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
+	//async
+	atomicIndex := new(int32)
+	*atomicIndex = -1
+	wg := sync.WaitGroup{}
+	wg.Add(runtime.NumCPU())
+	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+		go func() {
+			for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
+				j := len(c.indexes) - valueIndex - 1
+				values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
+			}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+
+	////sync
+	//for valueIndex := range values {
+	//	j := len(c.indexes) - valueIndex - 1
+	//	values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
+	//}
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
