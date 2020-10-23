@@ -29,7 +29,7 @@ type RootCluster struct {
 func NewRootCluster() *RootCluster {
 	a := arena.NewArena()
 	return &RootCluster{
-		limit: 99999999,
+		limit: 9999999,
 		arena: a,
 		strictComparator: comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
@@ -79,9 +79,12 @@ func (rs *RootCluster) Batch() {
 	Init(rs.arena)
 	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
 	rs.consumeNotifications()
+
+	// sync
 	for i := range rs.arena.List {
 		rs.Add(i)
 	}
+
 	rs.notifyAll()
 }
 
@@ -94,9 +97,10 @@ func (rs *RootCluster) consumeNotifications() {
 
 				c.m.Lock()
 				if len(c.endings) > 0 {
-					if index > c.endings[0].last {
-						c.addWithCrown(c.endings[0].i, c.endings[0].index)
-						c.endings = c.endings[1:]
+					lastEndingIndex := len(c.endings)-1
+					if index > c.endings[len(c.endings)-1].last {
+						c.addWithCrown(c.endings[lastEndingIndex].i, c.endings[lastEndingIndex].index)
+						c.endings = c.endings[:lastEndingIndex]
 					}
 				}
 				c.m.Unlock()
@@ -111,11 +115,15 @@ func (rs *RootCluster) notifyAll() {
 	}
 }
 
-//func (rs *RootCluster) Rate(index int) float32 { return 0 }
-func (rs *RootCluster) Add(index int) bool {
+func (rs *RootCluster) notifyIndex(index int) {
 	for i := range rs.clusters {
 		rs.notify <- [2]int{i, index}
 	}
+}
+
+//func (rs *RootCluster) Rate(index int) float32 { return 0 }
+func (rs *RootCluster) Add(index int) bool {
+	defer rs.notifyIndex(index)
 
 	// try add into one of existing bags
 	var i int

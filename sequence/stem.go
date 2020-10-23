@@ -2,10 +2,8 @@ package sequence
 
 import (
 	"github.com/olesho/classify/comparator"
-	"runtime"
 	"sort"
 	"sync"
-	"sync/atomic"
 )
 
 type ending struct {
@@ -31,9 +29,7 @@ type StemCluster struct {
 	m sync.Mutex
 }
 
-func (c *StemCluster) addWithCrown(indexI, index int) {
-	//values := make([]float32, len(c.indexes))
-
+func (c *StemCluster) addWithCrown(i, index int) {
 	var values []float32
 	if len(c.indexes) >= c.root.limit {
 		values = make([]float32, c.root.limit)
@@ -41,58 +37,51 @@ func (c *StemCluster) addWithCrown(indexI, index int) {
 		values = make([]float32, len(c.indexes))
 	}
 
-	//async
-	atomicIndex := new(int32)
-	*atomicIndex = -1
-	wg := sync.WaitGroup{}
-	wg.Add(runtime.NumCPU())
-	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-		go func() {
-			for i := int(atomic.AddInt32(atomicIndex, 1)); i < len(values); i = int(atomic.AddInt32(atomicIndex, 1)) {
-				values[i] = c.GetStem(i, indexI) + c.root.Cmp(c.indexes[i], index)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	// sync
-	//for i := range values {
-	//	values[i] = c.GetStem(i, indexI) + c.root.Cmp(c.indexes[i], index)
+	////async
+	//atomicIndex := new(int32)
+	//*atomicIndex = -1
+	//wg := sync.WaitGroup{}
+	//wg.Add(runtime.NumCPU())
+	//for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+	//	go func() {
+	//		for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
+	//			j := len(c.indexes) - valueIndex - 1
+	//			values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
+	//		}
+	//		wg.Done()
+	//	}()
 	//}
+	//wg.Wait()
+
+	//sync
+	for valueIndex := range values {
+		j := len(c.indexes) - valueIndex - 1
+		values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
+	}
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
 
 	idx := len(c.indexes)-1
-	var maxI int = -1
+	var maxN int = -1
 	var maxVal float32
 	// find max match to existing bags
-	for i, cluster := range c.clusters {
+	for n, cluster := range c.clusters {
 		if val := cluster.Rate(idx); val > maxVal {
-			maxI = i
+			maxN = n
 			maxVal = val
 		}
 	}
 
 	// not successful putting into any existing bag
-	if maxI == -1 {
+	if maxN == -1 {
 		c.clusters = append(c.clusters, &CrownCluster{
 			indexes: []int{index},
 			rate:    1,
 			stem:    c,
 		})
 	} else {
-		c.clusters[maxI].Add(maxVal, index)
-	}
-}
-
-func (c *StemCluster) Notify(index int) {
-	if len(c.endings) > 0 {
-		if index > c.endings[0].last {
-			c.addWithCrown(c.endings[0].i, c.endings[0].index)
-			c.endings = c.endings[1:]
-		}
+		c.clusters[maxN].Add(maxVal, index)
 	}
 }
 
@@ -147,6 +136,8 @@ func (c *StemCluster) Add(index int) bool {
 	return false
 }
 
+var maxDiff = 0
+
 func (c *StemCluster) GetStem(i, j int) float32 {
 	if i < j {
 		return c.stemValues[j][i]
@@ -175,32 +166,40 @@ func (c *StemCluster) FindStem(idx1, idx2 int) float32 {
 
 func (c *StemCluster) Get(i, j int) float32 {
 	if i < j {
-		if i >= len(c.values[j]) {
+		diff := j - i - 1
+		if diff >= c.root.limit || diff >= len(c.values[i]) {
 			return 0
 		}
-		return c.values[j][i]
+		//if i >= len(c.values[j]) {
+		//	return 0
+		//}
+		return c.values[j][diff]
 	} else if j < i {
-		if j >= len(c.values[i]) {
+		diff := i - j - 1
+		if diff >= c.root.limit || diff >= len(c.values[i]) {
 			return 0
 		}
-		return c.values[i][j]
+		//if j >= len(c.values[i]) {
+		//	return 0
+		//}
+		return c.values[i][diff]
 	}
 	return 0
 }
-
-func (c *StemCluster) Find(idx1, idx2 int) float32 {
-	i, j := -1, -1
-	for n, idx := range c.indexes {
-		if idx == idx1 {
-			i = n
-			break
-		}
-	}
-	for n, idx := range c.indexes {
-		if idx == idx2 {
-			j = n
-			break
-		}
-	}
-	return c.Get(i, j)
-}
+//
+//func (c *StemCluster) Find(idx1, idx2 int) float32 {
+//	i, j := -1, -1
+//	for n, idx := range c.indexes {
+//		if idx == idx1 {
+//			i = n
+//			break
+//		}
+//	}
+//	for n, idx := range c.indexes {
+//		if idx == idx2 {
+//			j = n
+//			break
+//		}
+//	}
+//	return c.Get(i, j)
+//}

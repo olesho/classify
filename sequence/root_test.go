@@ -100,8 +100,8 @@ func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	a.NoError(err)
 	err = r.LoadFile("../rozetka2.html")
 	a.NoError(err)
-	err = r.LoadFile("../rozetka3.html")
-	a.NoError(err)
+	//err = r.LoadFile("../rozetka3.html")
+	//a.NoError(err)
 
 	r.Batch()
 }
