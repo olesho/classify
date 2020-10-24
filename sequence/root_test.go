@@ -95,13 +95,20 @@ func TestRootCluster_LoadFile(t *testing.T) {
 
 func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster()
+	r := NewRootCluster().SetLimit(10)
 	err := r.LoadFile("../rozetka1.html")
 	a.NoError(err)
 	err = r.LoadFile("../rozetka2.html")
 	a.NoError(err)
-	//err = r.LoadFile("../rozetka3.html")
-	//a.NoError(err)
+	err = r.LoadFile("../rozetka3.html")
+	a.NoError(err)
 
 	r.Batch()
+
+	for _, cluster := range r.Results() {
+		if len(cluster.indexes) == 60*3 {
+			fmt.Println(cluster)
+			fmt.Println(cluster.rate)
+		}
+	}
 }

@@ -3,10 +3,11 @@ package sequence
 import "sort"
 
 func (rs *RootCluster) getElemRate(idx1, idx2 int) float32 {
-	if rs.nodeIDToCluster[idx1] == rs.nodeIDToCluster[idx2] {
-		v := rs.nodeIDToCluster[idx1].FindStem(idx1, idx2)
-		return v
-	}
+	return rs.FindStem(idx1, idx2)
+	//if rs.nodeIDToCluster[idx1] == rs.nodeIDToCluster[idx2] {
+	//	v := rs.nodeIDToCluster[idx1].FindStem(idx1, idx2)
+	//	return v
+	//}
 	return 0
 }
 

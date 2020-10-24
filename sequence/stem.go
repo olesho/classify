@@ -20,7 +20,7 @@ type StemCluster struct {
 
 	endings []ending
 	stemIndexes []int
-	stemValues [][]float32
+	//stemValues [][]float32
 
 	clusters []*CrownCluster
 
@@ -48,7 +48,7 @@ func (c *StemCluster) addWithCrown(i, index int) {
 		go func() {
 			for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
 				j := len(c.indexes) - valueIndex - 1
-				values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
+				values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
 			}
 			wg.Done()
 		}()
@@ -89,7 +89,7 @@ func (c *StemCluster) addWithCrown(i, index int) {
 
 func (c *StemCluster) AddFirst(index int) bool {
 	c.stemIndexes = []int{index}
-	c.stemValues = make([][]float32, 1)
+	//c.stemValues = make([][]float32, 1)
 	last := c.root.arena.Get(index).Ext.(*Additional).LastDescendant
 	if index == last {
 		//same as c.addWithCrown(0, index)
@@ -112,16 +112,19 @@ func (c *StemCluster) AddFirst(index int) bool {
 
 func (c *StemCluster) Add(index int) bool {
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
-		values := make([]float32, len(c.stemIndexes))
-		for i, existingIdx := range c.stemIndexes {
+		//values := make([]float32, len(c.stemIndexes))
+		for _, existingIdx := range c.stemIndexes {
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
-				values[i] = val
-			} else {
-				return false
+				//		values[i] = val
+				c.root.matrix[index][existingIdx] = val
 			}
+			// this should never happen
+			//} else {
+			//	return false
+			//}
 		}
 		c.stemIndexes = append(c.stemIndexes, index)
-		c.stemValues = append(c.stemValues, values)
+		//c.stemValues = append(c.stemValues, values)
 
 		c.m.Lock()
 		c.endings = append(c.endings, ending{
@@ -138,33 +141,16 @@ func (c *StemCluster) Add(index int) bool {
 	return false
 }
 
-var maxDiff = 0
+//func (c *StemCluster) GetStem(i, j int) float32 {
+//	if i < j {
+//		return c.stemValues[j][i]
+//	} else if j < i {
+//		return c.stemValues[i][j]
+//	}
+//	return 0
+//}
 
-func (c *StemCluster) GetStem(i, j int) float32 {
-	if i < j {
-		return c.stemValues[j][i]
-	} else if j < i {
-		return c.stemValues[i][j]
-	}
-	return 0
-}
 
-func (c *StemCluster) FindStem(idx1, idx2 int) float32 {
-	i, j := -1, -1
-	for n, idx := range c.stemIndexes {
-		if idx == idx1 {
-			i = n
-			break
-		}
-	}
-	for n, idx := range c.stemIndexes {
-		if idx == idx2 {
-			j = n
-			break
-		}
-	}
-	return c.GetStem(i, j)
-}
 
 func (c *StemCluster) Get(i, j int) float32 {
 	if i < j {
@@ -172,36 +158,13 @@ func (c *StemCluster) Get(i, j int) float32 {
 		if diff >= c.root.limit || diff >= len(c.values[i]) {
 			return 0
 		}
-		//if i >= len(c.values[j]) {
-		//	return 0
-		//}
 		return c.values[j][diff]
 	} else if j < i {
 		diff := i - j - 1
 		if diff >= c.root.limit || diff >= len(c.values[i]) {
 			return 0
 		}
-		//if j >= len(c.values[i]) {
-		//	return 0
-		//}
 		return c.values[i][diff]
 	}
 	return 0
 }
-//
-//func (c *StemCluster) Find(idx1, idx2 int) float32 {
-//	i, j := -1, -1
-//	for n, idx := range c.indexes {
-//		if idx == idx1 {
-//			i = n
-//			break
-//		}
-//	}
-//	for n, idx := range c.indexes {
-//		if idx == idx2 {
-//			j = n
-//			break
-//		}
-//	}
-//	return c.Get(i, j)
-//}

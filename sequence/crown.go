@@ -33,7 +33,12 @@ func (c *CrownCluster) Add(rate float32, index int) bool {
 
 func (c *CrownCluster) Rate(stemIndex int) float32 {
 	var lowestVal float32
-	for i := range c.indexes {
+	var i int
+	if len(c.indexes) > c.stem.root.limit {
+		i = len(c.indexes) - c.stem.root.limit
+	}
+
+	for ; i < len(c.indexes); i++ {
 		v := c.stem.Get(stemIndex, i)
 		if v > 0 {
 			if lowestVal == 0 {
@@ -44,6 +49,7 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 				lowestVal = v
 			}
 		} else {
+			// removed because of limit; only last [limit] values will be > 0
 			//return 0
 		}
 	}

@@ -31,13 +31,13 @@ func basicCmp(n1, n2 *arena.Node) bool {
 
 func (c *StrictComparator) Cmp(idx1, idx2 int) float32 {
 	chain1 := c.a.Chain(idx1, 0)
-	chain2 := c.a.Chain(idx1, 0)
+	chain2 := c.a.Chain(idx2, 0)
 	size1 := len(chain1)
 	size2 := len(chain2)
 	if size1 != size2 {
 		return 0
 	}
-	for index := 1; (index < size1) && (index < size2); index++ {
+	for index := 0; (index < size1) && (index < size2); index++ {
 		if !basicCmp(chain1[index], chain2[index]) {
 			return 0
 		}

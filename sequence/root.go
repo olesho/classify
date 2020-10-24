@@ -18,6 +18,7 @@ type RootCluster struct {
 
 	clusters []*StemCluster
 	nodeIDToCluster []*StemCluster
+	matrix [][]float32
 
 	arena *arena.Arena
 	strictComparator comparator.Comparator
@@ -29,12 +30,17 @@ type RootCluster struct {
 func NewRootCluster() *RootCluster {
 	a := arena.NewArena()
 	return &RootCluster{
-		limit: 9999999,
+		limit: 99999,
 		arena: a,
 		strictComparator: comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
 		notify: make(chan [2]int),
 	}
+}
+
+func (rs *RootCluster) SetLimit(limit int) *RootCluster {
+	rs.limit = limit
+	return rs
 }
 
 func (rs *RootCluster) newStemCluster(index int) *StemCluster {
@@ -78,6 +84,10 @@ func (rs *RootCluster) LoadString(str string) error {
 func (rs *RootCluster) Batch() {
 	Init(rs.arena)
 	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
+	rs.matrix = make([][]float32, len(rs.arena.List))
+	for i := range rs.matrix {
+		rs.matrix[i] = make([]float32, i)
+	}
 	rs.consumeNotifications()
 
 	// sync
@@ -86,6 +96,9 @@ func (rs *RootCluster) Batch() {
 	}
 
 	rs.notifyAll()
+
+	for len(rs.notify) > 0 {}
+	close(rs.notify)
 }
 
 func (rs *RootCluster) consumeNotifications() {
@@ -157,7 +170,14 @@ func (rs *RootCluster) Results() []*CrownCluster {
 	return crownClusters
 }
 
-
+func (rs *RootCluster) FindStem(idx1, idx2 int) float32 {
+	if idx1 > idx2 {
+		return rs.matrix[idx1][idx2]
+	} else if idx2 > idx1 {
+		return rs.matrix[idx2][idx1]
+	}
+	return 0
+}
 
 func (rs *RootCluster) String() string {
 	res := ""

@@ -191,7 +191,7 @@ func cmpStrings(s1 string, s2 string) float32 {
 			break
 		}
 	}
-	return coincided * 2 / float32(len(s1)+len(s2))
+	return coincided * 2 / float32(len(s1)+len(s2)) + 1 // +1 if both strings are nonempty
 }
 
 func isLowerChar(c byte) bool {
