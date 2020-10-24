@@ -11,7 +11,6 @@ import (
 type ending struct {
 	last int
 	index int
-	i int
 }
 
 type StemCluster struct {
@@ -31,7 +30,7 @@ type StemCluster struct {
 	m sync.Mutex
 }
 
-func (c *StemCluster) addWithCrown(i, index int) {
+func (c *StemCluster) addWithCrown(index int) {
 	var values []float32
 	if len(c.indexes) >= c.root.limit {
 		values = make([]float32, c.root.limit)
@@ -63,45 +62,43 @@ func (c *StemCluster) addWithCrown(i, index int) {
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
+	localIndex := len(c.indexes)-1
 
-	idx := len(c.indexes)-1
 	var maxN int = -1
 	var maxVal float32
 	// find max match to existing bags
 	for n, cluster := range c.clusters {
-		if val := cluster.Rate(idx); val > maxVal {
+		if val := cluster.Rate(localIndex); val > maxVal {
 			maxN = n
 			maxVal = val
 		}
 	}
 
 	// not successful putting into any existing bag
-	if maxN == -1 {
+	if maxN == -1 || !c.clusters[maxN].Add(maxVal, localIndex) {
 		c.clusters = append(c.clusters, &CrownCluster{
-			indexes: []int{index},
+			indexes: []int{localIndex},
 			rate:    1,
 			stem:    c,
 		})
-	} else {
-		c.clusters[maxN].Add(maxVal, index)
 	}
 }
 
 func (c *StemCluster) AddFirst(index int) bool {
 	c.stemIndexes = []int{index}
-	//c.stemValues = make([][]float32, 1)
 	last := c.root.arena.Get(index).Ext.(*Additional).LastDescendant
 	if index == last {
 		//same as c.addWithCrown(0, index)
+		c.indexes = []int{index}
+		c.values = append(c.values, []float32{})
 		c.clusters = append(c.clusters, &CrownCluster{
-			indexes: []int{index},
+			indexes: []int{0},
 			rate:    1,
 			stem:    c,
 		})
 	} else {
 		c.endings = []ending{
 			{
-				i:     0,
 				index: index,
 				last:  c.root.arena.Get(index).Ext.(*Additional).LastDescendant,
 			},
@@ -112,10 +109,8 @@ func (c *StemCluster) AddFirst(index int) bool {
 
 func (c *StemCluster) Add(index int) bool {
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
-		//values := make([]float32, len(c.stemIndexes))
 		for _, existingIdx := range c.stemIndexes {
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
-				//		values[i] = val
 				c.root.matrix[index][existingIdx] = val
 			}
 			// this should never happen
@@ -128,7 +123,6 @@ func (c *StemCluster) Add(index int) bool {
 
 		c.m.Lock()
 		c.endings = append(c.endings, ending{
-			i:     len(c.stemIndexes)-1,
 			index: index,
 			last:  c.root.arena.Get(index).Ext.(*Additional).LastDescendant,
 		})
@@ -140,17 +134,6 @@ func (c *StemCluster) Add(index int) bool {
 	}
 	return false
 }
-
-//func (c *StemCluster) GetStem(i, j int) float32 {
-//	if i < j {
-//		return c.stemValues[j][i]
-//	} else if j < i {
-//		return c.stemValues[i][j]
-//	}
-//	return 0
-//}
-
-
 
 func (c *StemCluster) Get(i, j int) float32 {
 	if i < j {

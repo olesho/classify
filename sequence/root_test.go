@@ -66,7 +66,7 @@ func TestRootCluster_Batch(t *testing.T) {
 	err := r.LoadString(testDoc1)
 	a.NoError(err)
 
-	r.Batch()
+	r.Batch().Results()
 
 	for _, c := range r.clusters {
 		if len(c.indexes) != len(c.stemIndexes) {
@@ -79,18 +79,17 @@ func TestRootCluster_Batch(t *testing.T) {
 
 func TestRootCluster_LoadFile(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster()
+	r := NewRootCluster()//.SetLimit(10)
 	err := r.LoadFile("../rozetka.html")
 	a.NoError(err)
-
-	r.Batch()
-
-	for _, cluster := range r.Results() {
-		if len(cluster.indexes) == 60 {
-			fmt.Println(cluster)
-			fmt.Println(cluster.rate)
+	series := r.Batch().Results()
+	for i, s := range series {
+		if s.Group.Size == 60 {
+			fmt.Println(i)
 		}
 	}
+
+
 }
 
 func TestRootCluster_LoadMultipleFiles(t *testing.T) {
@@ -103,12 +102,10 @@ func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	err = r.LoadFile("../rozetka3.html")
 	a.NoError(err)
 
-	r.Batch()
-
-	for _, cluster := range r.Results() {
-		if len(cluster.indexes) == 60*3 {
-			fmt.Println(cluster)
-			fmt.Println(cluster.rate)
+	series := r.Batch().Results()
+	for i, s := range series {
+		if s.Group.Size == 60*3 {
+			fmt.Println(i)
 		}
 	}
 }

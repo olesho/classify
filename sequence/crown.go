@@ -1,6 +1,9 @@
 package sequence
 
 import (
+	"github.com/olesho/classify/arena"
+	"golang.org/x/net/html"
+	"sort"
 	"strings"
 )
 
@@ -9,6 +12,22 @@ type CrownCluster struct {
 	stem *StemCluster
 	rate float32
 }
+
+func (c *CrownCluster) Has(index int) bool {
+	for _, nextIndex := range c.indexes {
+		if nextIndex == index {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *CrownCluster) resolveIndexes() {
+	for i, index := range c.indexes {
+		c.indexes[i] = c.stem.indexes[index]
+	}
+}
+
 
 func (c *CrownCluster) String() string {
 	r := make([]string, len(c.indexes))
@@ -22,10 +41,11 @@ func (c *CrownCluster) Volume() float32 {
 	return float32(len(c.indexes)) * c.rate
 }
 
-func (c *CrownCluster) Add(rate float32, index int) bool {
-	if c.Volume() < rate * float32(len(c.indexes)+1) {
+func (c *CrownCluster) Add(rate float32, localIndex int) bool {
+	volume, nextVolume := float32(len(c.indexes)) * c.rate, rate * float32(len(c.indexes)+1)
+	if volume < nextVolume {
 		c.rate = rate
-		c.indexes = append(c.indexes, index)
+		c.indexes = append(c.indexes, localIndex)
 		return true
 	}
 	return false
@@ -39,7 +59,7 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 	}
 
 	for ; i < len(c.indexes); i++ {
-		v := c.stem.Get(stemIndex, i)
+		v := c.stem.Get(stemIndex, c.indexes[i])
 		if v > 0 {
 			if lowestVal == 0 {
 				lowestVal = v
@@ -48,10 +68,151 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 			if v < lowestVal {
 				lowestVal = v
 			}
-		} else {
-			// removed because of limit; only last [limit] values will be > 0
-			//return 0
 		}
+		//} else {
+		// removed because of limit; only last [limit] values will be > 0
+		//return 0
+		//}
 	}
 	return lowestVal
+}
+
+
+func (c *CrownCluster) toTable() Table {
+	templateArena := c.MergeAll(c.indexes)
+	result := Table{
+		Arena:         c.stem.root.arena,
+		TemplateArena: templateArena,
+		Members:       make([]*arena.Node, len(c.indexes)),
+		Rate:          c.rate,
+	}
+
+	result.Fields = result.WholesomeGroupFields()
+	for i, memberIdx := range c.indexes {
+		result.Members[i] = c.stem.root.arena.Get(memberIdx)
+	}
+
+	return result
+}
+
+// MergeAll merges all nodes with indexes into single template producing new arena
+func (c *CrownCluster) MergeAll(indexes []int) *arena.Arena {
+	rootID := indexes[0]
+	templateArena := initClone(c.stem.root.arena, rootID)
+	for _, nextID := range indexes[1:] {
+		templateArena.List[1].Ext.(*Additional).AppendGroupId(nextID)
+		c.MergeIntoTemplate(templateArena, nextID, 1)
+	}
+	return templateArena
+}
+
+func initClone(arena *arena.Arena, root int) *arena.Arena {
+	res := arena.CloneBranch(root)
+	Init(res)
+	for i := range res.List[1:] {
+		res.List[1:][i].Ext.(*Additional).AppendGroupId(i + root)
+	}
+	return res
+}
+
+
+func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
+	mergedAttrs := []html.Attribute{}
+	for _, attr1 := range node1.Attr {
+		for _, attr2 := range node2.Attr {
+			if attr1.Key == attr2.Key {
+				mergedAttr := html.Attribute{
+					Key: attr1.Key,
+				}
+				if mergedAttr.Key == "class" {
+					mergedClasses := []string{}
+					for _, class1 := range node1.Classes() {
+						for _, class2 := range node2.Classes() {
+							if class1 == class2 {
+								mergedClasses = append(mergedClasses, class1)
+							}
+						}
+					}
+					mergedAttr.Val = strings.Join(mergedClasses, " ")
+				} else {
+					if attr1.Val == attr2.Val {
+						mergedAttr.Val = attr1.Val
+					}
+				}
+				mergedAttrs = append(mergedAttrs, mergedAttr)
+			}
+		}
+	}
+	return mergedAttrs
+}
+
+func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, templateIdx int) {
+	n1 := c.stem.root.arena.Get(mainIdx)
+	templateNode := templateArena.Get(templateIdx)
+	n2 := c.stem.root.arena.Get(templateNode.Ext.(*Additional).GroupIds[0])
+
+	// merge attributes
+	templateArena.List[templateIdx].Attr = mergeIntoTemplateAttrs(templateNode, n1)
+
+	// merge text node
+	if templateNode.Type == html.TextNode && n1.Type == html.TextNode {
+		if templateNode.Data != n1.Data {
+			templateNode.Data = "#text"
+		}
+	}
+
+	// merge children
+	size1, size2 := len(n1.Children), len(n2.Children)
+	ratingMatrixSize := size1 * size2
+	if ratingMatrixSize > 0 {
+		rating := make([]mergeItem, ratingMatrixSize)
+		for i1, idx1 := range n1.Children {
+			for i2, idx2 := range n2.Children {
+				idx := (i1+1)*(i2+1) - 1
+				rating[idx].Similarity = c.stem.root.FindCrown(idx1, idx2)
+				rating[idx].Index1 = i1
+				rating[idx].Index2 = i2
+				rating[idx].TemplateIndex = templateNode.Children[i2]
+			}
+		}
+
+		sort.Slice(rating, func(i, j int) bool {
+			return rating[i].Similarity > rating[j].Similarity
+		})
+
+		flags1 := make([]bool, size1)
+		flags2 := make([]bool, size2)
+		count := 0
+		smallerSize := 0
+		if size1 < size2 {
+			smallerSize = size1
+		} else {
+			smallerSize = size2
+		}
+
+		for _, rate := range rating { // TODO add exit if rate.Similarity == 0 !!!
+			if !flags1[rate.Index1] && !flags2[rate.Index2] {
+				if rate.Similarity == 0 {
+					break
+				}
+				templateChildNode := templateArena.Get(templateNode.Children[rate.Index2])
+				idx := n1.Children[rate.Index1]
+				templateChildNode.Ext.(*Additional).AppendGroupId(idx)
+				c.MergeIntoTemplate(templateArena, idx, rate.TemplateIndex)
+				flags1[rate.Index1] = true
+				flags2[rate.Index2] = true
+				count++
+				if count == smallerSize {
+					break
+				}
+			}
+		}
+	}
+}
+
+type mergeItem struct {
+	Similarity    float32
+	Index1        int
+	Index2        int
+	TemplateIndex int
 }

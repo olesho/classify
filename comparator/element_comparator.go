@@ -14,6 +14,26 @@ func NewElementComparator(a *arena.Arena) *ElementComparator {
 }
 
 func cmpAttr(n1, n2 *arena.Node) float32 {
+	var total float32
+	for _, attr1 := range n1.Attr {
+		total += 1
+		if attr1.Key == "class" {
+			total += float32(len(n1.Classes()))
+		} else {
+			total += 1
+		}
+		//total += float32(len(attr1.Val))
+	}
+	for _, attr2 := range n2.Attr {
+		total += 1
+		if attr2.Key == "class" {
+			total += float32(len(n2.Classes()))
+		} else {
+			total += 1
+		}
+		//total += float32(len(attr2.Val))
+	}
+
 	var coincided float32
 	for _, attr1 := range n1.Attr {
 		for _, attr2 := range n2.Attr {
@@ -33,7 +53,7 @@ func cmpAttr(n1, n2 *arena.Node) float32 {
 			}
 		}
 	}
-	return coincided
+	return coincided * 2 / total
 }
 
 func (c *ElementComparator) Cmp(idx1, idx2 int) float32 {

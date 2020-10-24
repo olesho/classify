@@ -24,6 +24,7 @@ type RootCluster struct {
 	strictComparator comparator.Comparator
 	elementComparator comparator.Comparator
 
+	wg sync.WaitGroup
 	notify chan [2]int
 }
 
@@ -34,6 +35,7 @@ func NewRootCluster() *RootCluster {
 		arena: a,
 		strictComparator: comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
+		wg: sync.WaitGroup{},
 		notify: make(chan [2]int),
 	}
 }
@@ -81,7 +83,7 @@ func (rs *RootCluster) LoadString(str string) error {
 	return nil
 }
 
-func (rs *RootCluster) Batch() {
+func (rs *RootCluster) Batch() *RootCluster {
 	Init(rs.arena)
 	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
 	rs.matrix = make([][]float32, len(rs.arena.List))
@@ -96,12 +98,14 @@ func (rs *RootCluster) Batch() {
 	}
 
 	rs.notifyAll()
-
 	for len(rs.notify) > 0 {}
 	close(rs.notify)
+	rs.wg.Wait()
+	return rs
 }
 
 func (rs *RootCluster) consumeNotifications() {
+	rs.wg.Add(runtime.NumCPU())
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func(){
 			for pair := range rs.notify {
@@ -112,12 +116,13 @@ func (rs *RootCluster) consumeNotifications() {
 				if len(c.endings) > 0 {
 					lastEndingIndex := len(c.endings)-1
 					if index > c.endings[len(c.endings)-1].last {
-						c.addWithCrown(c.endings[lastEndingIndex].i, c.endings[lastEndingIndex].index)
+						c.addWithCrown(c.endings[lastEndingIndex].index)
 						c.endings = c.endings[:lastEndingIndex]
 					}
 				}
 				c.m.Unlock()
 			}
+			rs.wg.Done()
 		}()
 	}
 }
@@ -157,17 +162,38 @@ func (rs *RootCluster) Add(index int) bool {
 	return true
 }
 
-func (rs *RootCluster) Results() []*CrownCluster {
+func (rs *RootCluster) Results() []Series {
 	var crownClusters = make([]*CrownCluster, 0)
 	for _, stemCluster := range rs.clusters {
 		for _, crownCluster := range stemCluster.clusters {
+			crownCluster.resolveIndexes()
 			crownClusters = append(crownClusters, crownCluster)
 		}
 	}
 	sort.Slice(crownClusters, func(i,j int) bool {
 		return len(crownClusters[i].indexes) > len(crownClusters[j].indexes)
 	})
-	return crownClusters
+
+	tables := make([]Table, len(crownClusters))
+	for i, cluster := range crownClusters {
+		tables[i] = cluster.toTable()
+	}
+
+	clusterGroups := groupClusters(rs.arena, tables)
+	sort.Slice(clusterGroups, func(i, j int) bool {
+		return clusterGroups[i].GroupVolume > clusterGroups[j].GroupVolume
+	})
+
+	// transpose
+	rm := make([]Series, len(clusterGroups))
+	for i, g := range clusterGroups {
+		rm[i] = Series{
+			Matrix: transpose(g),
+			Arena:  rs.arena,
+			Group:  g,
+		}
+	}
+	return rm
 }
 
 func (rs *RootCluster) FindStem(idx1, idx2 int) float32 {
@@ -177,6 +203,28 @@ func (rs *RootCluster) FindStem(idx1, idx2 int) float32 {
 		return rs.matrix[idx2][idx1]
 	}
 	return 0
+}
+
+func (rs *RootCluster) FindCrown(idx1, idx2 int) float32 {
+	c1, c2 := rs.nodeIDToCluster[idx1], rs.nodeIDToCluster[idx2]
+	if c1 != c2 {
+		return 0
+	}
+
+	i, j := -1, -1
+	for n, idx := range c1.indexes {
+		if idx == idx1 {
+			i = n
+			break
+		}
+	}
+	for n, idx := range c1.indexes {
+		if idx == idx2 {
+			j = n
+			break
+		}
+	}
+	return c1.Get(i, j)
 }
 
 func (rs *RootCluster) String() string {
