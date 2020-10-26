@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/olesho/classify/sequence"
 	"os"
 	"os/exec"
 	"runtime"
@@ -10,15 +11,15 @@ import (
 
 	"github.com/c-bata/go-prompt"
 	"github.com/nathan-fiscaletti/consolesize-go"
-	"github.com/olesho/classify/stream"
 )
 
-var engine *stream.Storage
-var matrix []stream.Series
+var engine *sequence.RootCluster
+var matrix []*sequence.Series
+//var matrix []*stream.Series
 
 func funcReset(command string) {
 	matrix = nil
-	engine = stream.NewStorage()
+	engine = sequence.NewRootCluster()
 }
 
 func funcClear(command string) {
@@ -38,8 +39,8 @@ func funcClear(command string) {
 func renderOutput(groupIdx int, render func(itemID int) []string) {
 	cols, _ := consolesize.GetConsoleSize()
 	bw := NewBlockWriter(cols+1, 1, 1)
-	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].Matrix)))
-	for i, series := range matrix[groupIdx].Nonuniform().Matrix {
+	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].TransposedNodes)))
+	for i, series := range matrix[groupIdx].TransposedNodes {
 		bw.Open(prompt.Brown, prompt.White, fmt.Sprintf("Group %v", i+1))
 		for itemIndex, item := range series {
 			subItems := render(item.Id)
@@ -56,20 +57,37 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 	return
 }
 
+func renderFields(groupIdx int) {
+	cols, _ := consolesize.GetConsoleSize()
+	bw := NewBlockWriter(cols+1, 1, 1)
+	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].TransposedFields)))
+	for i, fields := range matrix[groupIdx].TransposedFields {
+		bw.Open(prompt.Brown, prompt.White, fmt.Sprintf("Group %v", i+1))
+		for fieldIndex, field := range fields {
+			bw.Open(prompt.Cyan, prompt.White, fmt.Sprintf("Item %v", fieldIndex+1))
+			bw.WriteText(prompt.Black, prompt.White, false, field)
+			bw.Close()
+		}
+		bw.Close()
+	}
+	bw.Close()
+	return
+}
+
 func funcRun(command string) {
-	//parts := runRule.FindStringSubmatch(command)
-	//windowLength := 0
-	//if len(parts) > 0 {
-	//	windowLength, _ = strconv.Atoi(parts[1])
-	//}
-	//engine.SetWindowSize(windowLength)
-	matrix = engine.RunAsync()
+	parts := runRule.FindStringSubmatch(command)
+	if len(parts) > 1 {
+		windowLength := 0
+		windowLength, _ = strconv.Atoi(parts[1])
+		engine.SetLimit(windowLength)
+	}
+	matrix = engine.Batch().Results()
 	fmt.Printf("succesfully loaded %v groups\n", len(matrix))
 }
 
 func funcShow(command string) {
 	if matrix == nil {
-		matrix = engine.Run()
+		matrix = engine.Batch().Results()
 		fmt.Printf("succesfully loaded %v groups\n" +
 			"" +
 			"", len(matrix))
@@ -101,9 +119,11 @@ func funcShow(command string) {
 					renderOutput(idx, func(itemID int) []string {
 						return engine.Arena.StringifyInformation(itemID)
 					})
+				case "fields":
+					renderFields(idx)
 				case "info":
-					fmt.Println(engine.Arena.Chain(matrix[idx].Matrix[0][0].Id, 0).XPath())
-					fmt.Printf("rows in group: %v\n", len(matrix[idx].Matrix))
+					fmt.Println(engine.Arena.Chain(matrix[idx].TransposedNodes[0][0].Id, 0).XPath())
+					fmt.Printf("rows in group: %v\n", len(matrix[idx].TransposedNodes))
 					fmt.Printf("nodes in cluster: %v\n", len(matrix[idx].Group.Clusters))
 					fmt.Printf("group volume: %v\n", matrix[idx].Group.GroupVolume)
 					fmt.Printf("group size: %v\n", matrix[idx].Group.Size)

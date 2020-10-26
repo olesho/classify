@@ -109,6 +109,11 @@ var commands = []Cmd{
 		Suggest: prompt.Suggest{Text: "show text", Description: "show text [group_index] - shows content for element group_index [index] from current list"},
 	},
 	{
+		Regexp:  showRule,
+		Func:    funcShow,
+		Suggest: prompt.Suggest{Text: "show fields", Description: "show fields [group_index] - shows content for element group_index [index] from current list"},
+	},
+	{
 		Regexp:  clearRule,
 		Func:    funcClear,
 		Suggest: prompt.Suggest{Text: "clear", Description: "clear output"},

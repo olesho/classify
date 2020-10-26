@@ -86,7 +86,7 @@ func (c *StemCluster) addWithCrown(index int) {
 
 func (c *StemCluster) AddFirst(index int) bool {
 	c.stemIndexes = []int{index}
-	last := c.root.arena.Get(index).Ext.(*Additional).LastDescendant
+	last := c.root.Arena.Get(index).Ext.(*Additional).LastDescendant
 	if index == last {
 		//same as c.addWithCrown(0, index)
 		c.indexes = []int{index}
@@ -100,7 +100,7 @@ func (c *StemCluster) AddFirst(index int) bool {
 		c.endings = []ending{
 			{
 				index: index,
-				last:  c.root.arena.Get(index).Ext.(*Additional).LastDescendant,
+				last:  c.root.Arena.Get(index).Ext.(*Additional).LastDescendant,
 			},
 		}
 	}
@@ -124,7 +124,7 @@ func (c *StemCluster) Add(index int) bool {
 		c.m.Lock()
 		c.endings = append(c.endings, ending{
 			index: index,
-			last:  c.root.arena.Get(index).Ext.(*Additional).LastDescendant,
+			last:  c.root.Arena.Get(index).Ext.(*Additional).LastDescendant,
 		})
 		sort.Slice(c.endings, func(i, j int) bool {
 			return c.endings[i].last > c.endings[j].last

@@ -3,7 +3,7 @@ package sequence
 import "sort"
 
 func (rs *RootCluster) Cmp(idx1, idx2 int) float32 {
-	n1, n2 := rs.arena.Get(idx1), rs.arena.Get(idx2)
+	n1, n2 := rs.Arena.Get(idx1), rs.Arena.Get(idx2)
 	size1, size2 := len(n1.Children), len(n2.Children)
 	rating := make([]rateItem, size1*size2)
 	for i1, idx1 := range n1.Children {

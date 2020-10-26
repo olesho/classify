@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/olesho/classify/sequence"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/c-bata/go-prompt"
-	"github.com/olesho/classify/stream"
 )
 
 var history []string
@@ -23,7 +23,7 @@ func main() {
 		log.Println(err)
 	}
 	history = strings.Split(string(bts), "\n")
-	engine = stream.NewStorage()
+	engine = sequence.NewRootCluster()
 	for {
 		input := prompt.Input("> ", completer, prompt.OptionHistory(history))
 		history = append(history, input)

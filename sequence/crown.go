@@ -32,7 +32,7 @@ func (c *CrownCluster) resolveIndexes() {
 func (c *CrownCluster) String() string {
 	r := make([]string, len(c.indexes))
 	for i, index := range c.indexes {
-		r[i] = c.stem.root.arena.StringifyNode(index)
+		r[i] = c.stem.root.Arena.StringifyNode(index)
 	}
 	return strings.Join(r, " ")
 }
@@ -81,7 +81,7 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 func (c *CrownCluster) toTable() Table {
 	templateArena := c.MergeAll(c.indexes)
 	result := Table{
-		Arena:         c.stem.root.arena,
+		Arena:         c.stem.root.Arena,
 		TemplateArena: templateArena,
 		Members:       make([]*arena.Node, len(c.indexes)),
 		Rate:          c.rate,
@@ -89,7 +89,7 @@ func (c *CrownCluster) toTable() Table {
 
 	result.Fields = result.WholesomeGroupFields()
 	for i, memberIdx := range c.indexes {
-		result.Members[i] = c.stem.root.arena.Get(memberIdx)
+		result.Members[i] = c.stem.root.Arena.Get(memberIdx)
 	}
 
 	return result
@@ -97,7 +97,7 @@ func (c *CrownCluster) toTable() Table {
 
 // MergeAll merges all nodes with indexes into single template producing new arena
 func (c *CrownCluster) MergeAll(indexes []int) *arena.Arena {
-	templateArena := initClone(c.stem.root.arena, indexes[0])
+	templateArena := initClone(c.stem.root.Arena, indexes[0])
 	for _, nextID := range indexes[1:] {
 		templateArena.List[1].Ext.(*Additional).AppendGroupId(nextID)
 		c.MergeIntoTemplate(templateArena, nextID, 1)
@@ -145,7 +145,7 @@ func mergeIntoTemplateAttrs(n1, n2 *arena.Node) []html.Attribute {
 }
 
 func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, templateIdx int) {
-	n1 := c.stem.root.arena.Get(mainIdx)
+	n1 := c.stem.root.Arena.Get(mainIdx)
 	templateNode := templateArena.Get(templateIdx)
 
 	// merge attributes

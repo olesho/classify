@@ -6,6 +6,7 @@ import (
 	"github.com/olesho/classify/arena"
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
+	"io"
 	"os"
 	"runtime"
 	"sort"
@@ -20,7 +21,7 @@ type RootCluster struct {
 	nodeIDToCluster []*StemCluster
 	matrix [][]float32
 
-	arena *arena.Arena
+	Arena *arena.Arena
 	strictComparator comparator.Comparator
 	elementComparator comparator.Comparator
 
@@ -32,7 +33,7 @@ func NewRootCluster() *RootCluster {
 	a := arena.NewArena()
 	return &RootCluster{
 		limit: 99999,
-		arena: a,
+		Arena: a,
 		strictComparator: comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
 		wg: sync.WaitGroup{},
@@ -58,6 +59,16 @@ func (rs *RootCluster) newStemCluster(index int) *StemCluster {
 }
 
 // LoadFile appends HTML file content
+func (rs *RootCluster) Load(r io.Reader) error {
+	n, err := html.Parse(r)
+	if err != nil {
+		return err
+	}
+	rs.Arena.Append(*n)
+	return nil
+}
+
+// LoadFile appends HTML file content
 func (rs *RootCluster) LoadFile(fileName string) error {
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -69,7 +80,7 @@ func (rs *RootCluster) LoadFile(fileName string) error {
 	if err != nil {
 		return err
 	}
-	rs.arena.Append(*n)
+	rs.Arena.Append(*n)
 	return nil
 }
 
@@ -79,21 +90,21 @@ func (rs *RootCluster) LoadString(str string) error {
 	if err != nil {
 		return err
 	}
-	rs.arena.Append(*n)
+	rs.Arena.Append(*n)
 	return nil
 }
 
 func (rs *RootCluster) Batch() *RootCluster {
-	Init(rs.arena)
-	rs.nodeIDToCluster = make([]*StemCluster, len(rs.arena.List))
-	rs.matrix = make([][]float32, len(rs.arena.List))
+	Init(rs.Arena)
+	rs.nodeIDToCluster = make([]*StemCluster, len(rs.Arena.List))
+	rs.matrix = make([][]float32, len(rs.Arena.List))
 	for i := range rs.matrix {
 		rs.matrix[i] = make([]float32, i)
 	}
 	rs.consumeNotifications()
 
 	// sync
-	for i := range rs.arena.List {
+	for i := range rs.Arena.List {
 		rs.Add(i)
 	}
 
@@ -129,7 +140,7 @@ func (rs *RootCluster) consumeNotifications() {
 
 func (rs *RootCluster) notifyAll() {
 	for i := range rs.clusters {
-		rs.notify <- [2]int{i, len(rs.arena.List)}
+		rs.notify <- [2]int{i, len(rs.Arena.List)}
 	}
 }
 
@@ -179,7 +190,7 @@ func (rs *RootCluster) Results() []*Series {
 		tables[i] = cluster.toTable()
 	}
 
-	clusterGroups := groupClusters(rs.arena, tables)
+	clusterGroups := groupClusters(rs.Arena, tables)
 
 	// transpose
 	rm := make([]*Series, len(clusterGroups))
@@ -189,7 +200,7 @@ func (rs *RootCluster) Results() []*Series {
 		}
 
 		rm[i] = removeEqualFields(transpose(g))
-		rm[i].Arena = rs.arena
+		rm[i].Arena = rs.Arena
 		rm[i].Group.Volume = rateSeries(rm[i])
 	}
 
