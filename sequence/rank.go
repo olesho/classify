@@ -1,9 +1,9 @@
 package sequence
 
 import (
-"strings"
+	"strings"
 
-"github.com/olesho/classify/arena"
+	"github.com/olesho/classify/arena"
 )
 
 type Nodes []*arena.Node
@@ -13,7 +13,8 @@ type Nodes []*arena.Node
 //}
 
 type Series struct {
-	Matrix []Nodes
+	TransposedFields [][]string
+	TransposedNodes []Nodes
 	Arena  *arena.Arena
 	Group  *ClusterGroup
 	//Volume float32
@@ -22,8 +23,8 @@ type Series struct {
 }
 
 func (m *Series) isFieldUniform(index int) bool {
-	val := strings.Join(m.Arena.StringifyInformation(m.Matrix[0][index].Id), " ")
-	for _, row := range m.Matrix {
+	val := strings.Join(m.Arena.StringifyInformation(m.TransposedNodes[0][index].Id), " ")
+	for _, row := range m.TransposedNodes {
 		if strings.Join(m.Arena.StringifyInformation(row[index].Id), " ") != val {
 			return false
 		}
@@ -32,16 +33,16 @@ func (m *Series) isFieldUniform(index int) bool {
 }
 
 func (m *Series) Uniform() *Series {
-	result := &Series{Arena: m.Arena, Matrix: make([]Nodes, len(m.Matrix))}
-	uniformity := make([]bool, len(m.Matrix[0]))
-	for i := 0; i < len(m.Matrix[0]); i++ {
+	result := &Series{Arena: m.Arena, TransposedNodes: make([]Nodes, len(m.TransposedNodes))}
+	uniformity := make([]bool, len(m.TransposedNodes[0]))
+	for i := 0; i < len(m.TransposedNodes[0]); i++ {
 		uniformity[i] = m.isFieldUniform(i)
 	}
 
-	for rowIndex, row := range m.Matrix {
+	for rowIndex, row := range m.TransposedNodes {
 		for i, isUniform := range uniformity {
 			if isUniform {
-				result.Matrix[rowIndex] = append(result.Matrix[rowIndex], row[i])
+				result.TransposedNodes[rowIndex] = append(result.TransposedNodes[rowIndex], row[i])
 			}
 		}
 	}
@@ -50,16 +51,16 @@ func (m *Series) Uniform() *Series {
 }
 
 func (m *Series) Nonuniform() *Series {
-	result := &Series{Arena: m.Arena, Matrix: make([]Nodes, len(m.Matrix))}
-	uniformity := make([]bool, len(m.Matrix[0]))
-	for i := 0; i < len(m.Matrix[0]); i++ {
+	result := &Series{Arena: m.Arena, TransposedNodes: make([]Nodes, len(m.TransposedNodes))}
+	uniformity := make([]bool, len(m.TransposedNodes[0]))
+	for i := 0; i < len(m.TransposedNodes[0]); i++ {
 		uniformity[i] = m.isFieldUniform(i)
 	}
 
-	for rowIndex, row := range m.Matrix {
+	for rowIndex, row := range m.TransposedNodes {
 		for i, isUniform := range uniformity {
 			if !isUniform {
-				result.Matrix[rowIndex] = append(result.Matrix[rowIndex], row[i])
+				result.TransposedNodes[rowIndex] = append(result.TransposedNodes[rowIndex], row[i])
 			}
 		}
 	}
@@ -70,7 +71,7 @@ func (m *Series) Nonuniform() *Series {
 func (s *Series) String() string {
 	stopper := 0
 	result := ""
-	for _, row := range s.Matrix {
+	for _, row := range s.TransposedNodes {
 		for _, item := range row {
 			chain := s.Arena.Chain(item.Id, stopper)
 			result += chain.XPath() + "\n"
@@ -80,30 +81,44 @@ func (s *Series) String() string {
 	return result
 }
 
-func transpose(group *ClusterGroup) []Nodes {
+func transpose(group *ClusterGroup) *Series {
 	size := len(group.Clusters[0].Members)
-	newGroup := make([]Nodes, size)
+	transposedNodes := make([]Nodes, size)
 	for i := 0; i < size; i++ {
 		row := Nodes{}
 		for _, bag := range group.Clusters {
 			row = append(row, bag.Members[i])
 		}
-		newGroup[i] = row
+		transposedNodes[i] = row
 	}
-	return newGroup
+
+	transposedFields := make([][]string, size)
+	for i := 0; i < size; i++ {
+		for _, cluster := range group.Clusters {
+			for _, field := range cluster.Fields {
+				transposedFields[i] = append(transposedFields[i], field.Content[i])
+			}
+		}
+	}
+
+	return &Series{
+		Group: group,
+		TransposedFields: transposedFields,
+		TransposedNodes: transposedNodes,
+	}
 }
 
 func (s *Series) Patterns() *arena.Template {
-	groupSize := len(s.Matrix[0])
-	for _, row := range s.Matrix[1:] {
+	groupSize := len(s.TransposedNodes[0])
+	for _, row := range s.TransposedNodes[1:] {
 		if groupSize != len(row) {
 			panic("Rows size not equal")
 			return nil
 		}
 	}
 
-	var templates = make([]arena.Template, len(s.Matrix))
-	for templIdx, row := range s.Matrix {
+	var templates = make([]arena.Template, len(s.TransposedNodes))
+	for templIdx, row := range s.TransposedNodes {
 		templates[templIdx] = arena.Template{Chains: make([]arena.Chain, len(row))}
 		for i, n := range row {
 			templates[templIdx].Chains[i] = s.Arena.Chain(n.Id, 0)

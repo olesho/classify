@@ -97,8 +97,7 @@ func (c *CrownCluster) toTable() Table {
 
 // MergeAll merges all nodes with indexes into single template producing new arena
 func (c *CrownCluster) MergeAll(indexes []int) *arena.Arena {
-	rootID := indexes[0]
-	templateArena := initClone(c.stem.root.arena, rootID)
+	templateArena := initClone(c.stem.root.arena, indexes[0])
 	for _, nextID := range indexes[1:] {
 		templateArena.List[1].Ext.(*Additional).AppendGroupId(nextID)
 		c.MergeIntoTemplate(templateArena, nextID, 1)
@@ -115,19 +114,18 @@ func initClone(arena *arena.Arena, root int) *arena.Arena {
 	return res
 }
 
-
-func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
-	mergedAttrs := []html.Attribute{}
-	for _, attr1 := range node1.Attr {
-		for _, attr2 := range node2.Attr {
+func mergeIntoTemplateAttrs(n1, n2 *arena.Node) []html.Attribute {
+	var mergedAttrs []html.Attribute
+	for _, attr1 := range n1.Attr {
+		for _, attr2 := range n2.Attr {
 			if attr1.Key == attr2.Key {
 				mergedAttr := html.Attribute{
 					Key: attr1.Key,
 				}
 				if mergedAttr.Key == "class" {
 					mergedClasses := []string{}
-					for _, class1 := range node1.Classes() {
-						for _, class2 := range node2.Classes() {
+					for _, class1 := range n1.Classes() {
+						for _, class2 := range n2.Classes() {
 							if class1 == class2 {
 								mergedClasses = append(mergedClasses, class1)
 							}
@@ -149,7 +147,6 @@ func mergeIntoTemplateAttrs(node1, node2 *arena.Node) []html.Attribute {
 func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, templateIdx int) {
 	n1 := c.stem.root.arena.Get(mainIdx)
 	templateNode := templateArena.Get(templateIdx)
-	n2 := c.stem.root.arena.Get(templateNode.Ext.(*Additional).GroupIds[0])
 
 	// merge attributes
 	templateArena.List[templateIdx].Attr = mergeIntoTemplateAttrs(templateNode, n1)
@@ -162,17 +159,29 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 	}
 
 	// merge children
-	size1, size2 := len(n1.Children), len(n2.Children)
+	size1, size2 := len(n1.Children), len(templateNode.Children)
 	ratingMatrixSize := size1 * size2
 	if ratingMatrixSize > 0 {
 		rating := make([]mergeItem, ratingMatrixSize)
-		for i1, idx1 := range n1.Children {
-			for i2, idx2 := range n2.Children {
+		for i2, idx2 := range templateNode.Children {
+			templateChildNodeGroupIDs := templateArena.Get(idx2).Ext.(*Additional).GroupIds
+			for i1, idx1 := range n1.Children {
 				idx := (i1+1)*(i2+1) - 1
-				rating[idx].Similarity = c.stem.root.FindCrown(idx1, idx2)
+
+				var sum float32
+				cnt := 0
+				for _, id := range templateChildNodeGroupIDs {
+					if val := c.stem.root.FindCrown(idx1, id); val > 0  {
+						sum += val
+						cnt++
+					}
+				}
+				if cnt > 0 {
+					rating[idx].Similarity = sum / float32(cnt)
+				}
+
 				rating[idx].Index1 = i1
 				rating[idx].Index2 = i2
-				rating[idx].TemplateIndex = templateNode.Children[i2]
 			}
 		}
 
@@ -198,7 +207,7 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 				templateChildNode := templateArena.Get(templateNode.Children[rate.Index2])
 				idx := n1.Children[rate.Index1]
 				templateChildNode.Ext.(*Additional).AppendGroupId(idx)
-				c.MergeIntoTemplate(templateArena, idx, rate.TemplateIndex)
+				c.MergeIntoTemplate(templateArena, idx, templateNode.Children[rate.Index2])
 				flags1[rate.Index1] = true
 				flags2[rate.Index2] = true
 				count++
@@ -214,5 +223,4 @@ type mergeItem struct {
 	Similarity    float32
 	Index1        int
 	Index2        int
-	TemplateIndex int
 }

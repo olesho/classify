@@ -2,11 +2,6 @@ package sequence
 
 import "sort"
 
-func (rs *RootCluster) getElemRate(idx1, idx2 int) float32 {
-	return rs.FindStem(idx1, idx2)
-	return 0
-}
-
 func (rs *RootCluster) Cmp(idx1, idx2 int) float32 {
 	n1, n2 := rs.arena.Get(idx1), rs.arena.Get(idx2)
 	size1, size2 := len(n1.Children), len(n2.Children)
@@ -14,7 +9,7 @@ func (rs *RootCluster) Cmp(idx1, idx2 int) float32 {
 	for i1, idx1 := range n1.Children {
 		for i2, idx2 := range n2.Children {
 			idx := (i1+1)*(i2+1) - 1
-			rc := rs.getElemRate(idx1, idx2)
+			rc := rs.FindStem(idx1, idx2)
 			if rc > 0 {
 				cv := rs.Cmp(idx1, idx2)
 				rc += cv

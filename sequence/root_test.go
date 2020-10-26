@@ -94,7 +94,7 @@ func TestRootCluster_LoadFile(t *testing.T) {
 
 func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster().SetLimit(10)
+	r := NewRootCluster().SetLimit(20)
 	err := r.LoadFile("../rozetka1.html")
 	a.NoError(err)
 	err = r.LoadFile("../rozetka2.html")
@@ -104,7 +104,7 @@ func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 
 	series := r.Batch().Results()
 	for i, s := range series {
-		if s.Group.Size == 60*3 {
+		if s.Group.Size == 180 {
 			fmt.Println(i)
 		}
 	}

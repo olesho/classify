@@ -162,7 +162,7 @@ func (rs *RootCluster) Add(index int) bool {
 	return true
 }
 
-func (rs *RootCluster) Results() []Series {
+func (rs *RootCluster) Results() []*Series {
 	var crownClusters = make([]*CrownCluster, 0)
 	for _, stemCluster := range rs.clusters {
 		for _, crownCluster := range stemCluster.clusters {
@@ -180,20 +180,59 @@ func (rs *RootCluster) Results() []Series {
 	}
 
 	clusterGroups := groupClusters(rs.arena, tables)
-	sort.Slice(clusterGroups, func(i, j int) bool {
-		return clusterGroups[i].GroupVolume > clusterGroups[j].GroupVolume
-	})
 
 	// transpose
-	rm := make([]Series, len(clusterGroups))
+	rm := make([]*Series, len(clusterGroups))
 	for i, g := range clusterGroups {
-		rm[i] = Series{
-			Matrix: transpose(g),
-			Arena:  rs.arena,
-			Group:  g,
+		if g.Size == 60 {
+			fmt.Println()
+		}
+
+		rm[i] = removeEqualFields(transpose(g))
+		rm[i].Arena = rs.arena
+		rm[i].Group.Volume = rateSeries(rm[i])
+	}
+
+	sort.Slice(rm, func(i, j int) bool {
+		return rm[i].Group.Volume > rm[j].Group.Volume
+		//return clusterGroups[i].GroupVolume > clusterGroups[j].GroupVolume
+	})
+
+	return rm
+}
+
+func equalFields(f1, f2 []string) bool {
+	if len(f1) == len(f2) {
+		for i := range f1 {
+			if f1[i] != f2[i] {
+				return false
+			}
 		}
 	}
-	return rm
+	return true
+}
+
+func removeEqualFields(s *Series) *Series {
+	for fieldIndex := 0; fieldIndex <  len(s.TransposedFields); fieldIndex++ {
+		for offset := fieldIndex + 1; offset < len(s.TransposedFields); offset++ {
+			if equalFields(s.TransposedFields[fieldIndex], s.TransposedFields[offset]) {
+				s.TransposedFields = append(s.TransposedFields[:offset], s.TransposedFields[offset+1:]...)
+				s.TransposedNodes = append(s.TransposedNodes[:offset], s.TransposedNodes[offset+1:]...)
+				offset--
+			}
+		}
+	}
+	return s
+}
+
+func rateSeries(s *Series) float32 {
+	var sum float32
+	for _, fields := range s.TransposedFields {
+		for range fields {
+			sum += 1
+		}
+	}
+	return sum
 }
 
 func (rs *RootCluster) FindStem(idx1, idx2 int) float32 {

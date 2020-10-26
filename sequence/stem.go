@@ -138,13 +138,13 @@ func (c *StemCluster) Add(index int) bool {
 func (c *StemCluster) Get(i, j int) float32 {
 	if i < j {
 		diff := j - i - 1
-		if diff >= c.root.limit || diff >= len(c.values[i]) {
+		if diff >= c.root.limit {
 			return 0
 		}
 		return c.values[j][diff]
 	} else if j < i {
 		diff := i - j - 1
-		if diff >= c.root.limit || diff >= len(c.values[i]) {
+		if diff >= c.root.limit {
 			return 0
 		}
 		return c.values[i][diff]
