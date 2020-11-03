@@ -27,6 +27,7 @@ const (
 type Field struct {
 	Type    int
 	Content []string
+	IDs []int
 }
 
 func (f Field) String() string {
@@ -131,6 +132,7 @@ func (c *Table) WholesomeGroupFields() []Field {
 func extractFields(arena *arena.Arena, ids []int, fieldType int) *Field {
 	values := &Field{}
 	values.Content = make([]string, len(ids))
+	values.IDs = ids
 	for i, id := range ids {
 		values.Content[i], values.Type = WholesomeInfo(arena.Get(id))
 		if values.Type != fieldType {

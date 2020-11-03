@@ -89,7 +89,25 @@ func TestRootCluster_LoadFile(t *testing.T) {
 		}
 	}
 
+	// TODO: get XPath
+	for _, n := range series[0].TransposedNodes {
+		fmt.Println(n)
+	}
 
+}
+
+func TestRootCluster_Hackernews(t *testing.T) {
+	a := assert.New(t)
+	r := NewRootCluster()//.SetLimit(10)
+	//err := r.LoadFile("../bin/samples/ycomb.html")
+	err := r.LoadFile("../bin/samples/hn.html")
+	a.NoError(err)
+	series := r.Batch().Results()
+	for i, s := range series {
+		if s.Group.Size == 30 {
+			fmt.Println(i)
+		}
+	}
 }
 
 func TestRootCluster_LoadMultipleFiles(t *testing.T) {

@@ -132,3 +132,21 @@ func (s *Series) Patterns() *arena.Template {
 	return template
 }
 
+func (s *Series) XPaths() []string {
+	var results = make([]string, 0)
+	for _, cluster := range s.Group.Clusters {
+		for _, field := range cluster.Fields {
+			chains := make([]arena.Chain, 0)
+			for _, id := range field.IDs {
+				chains = append(chains, cluster.Arena.Chain(id, 0))
+			}
+			resultChain := chains[0]
+			for _, chain := range chains[1:] {
+				resultChain = arena.MergeChains(chain, resultChain)
+			}
+			results = append(results, resultChain.XPath())
+		}
+	}
+	return results
+}
+

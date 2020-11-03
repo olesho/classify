@@ -102,12 +102,9 @@ func (rs *RootCluster) Batch() *RootCluster {
 		rs.matrix[i] = make([]float32, i)
 	}
 	rs.consumeNotifications()
-
-	// sync
 	for i := range rs.Arena.List {
 		rs.Add(i)
 	}
-
 	rs.notifyAll()
 	for len(rs.notify) > 0 {}
 	close(rs.notify)
