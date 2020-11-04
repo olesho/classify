@@ -1,11 +1,10 @@
 package sequence
 
 import (
+	"fmt"
 	"github.com/olesho/classify/comparator"
-	"runtime"
 	"sort"
 	"sync"
-	"sync/atomic"
 )
 
 type ending struct {
@@ -39,43 +38,106 @@ func (c *StemCluster) addWithCrown(index int) {
 	}
 
 	//async
-	atomicIndex := new(int32)
-	*atomicIndex = -1
-	wg := sync.WaitGroup{}
-	wg.Add(runtime.NumCPU())
-	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-		go func() {
-			for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
-				j := len(c.indexes) - valueIndex - 1
-				values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
+	//atomicIndex := new(int32)
+	//*atomicIndex = -1
+	//wg := sync.WaitGroup{}
+	//wg.Add(runtime.NumCPU())
+	//for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+	//	go func() {
+	//		for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
+	//			j := len(c.indexes) - valueIndex - 1
+	//
+	//			//if c.indexes[j] == 388 && index == 352 {
+	//			//	fmt.Println()
+	//			//}
+	//
+	//			values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
+	//		}
+	//		wg.Done()
+	//	}()
+	//}
+	//wg.Wait()
 
 	////sync
-	//for valueIndex := range values {
-	//	j := len(c.indexes) - valueIndex - 1
-	//	values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
-	//}
+	for valueIndex := range values {
+		j := len(c.indexes) - valueIndex - 1
+
+		if c.indexes[j] == 352 && index == 388 {
+			c.root.CmpTrace(c.indexes[j], index, true)
+		}
+		if c.indexes[j] == 316 && index == 352 {
+			c.root.CmpTrace(c.indexes[j], index, true)
+		}
+
+		//if c.indexes[j] == 360 && index == 396 {
+		//	c.root.CmpTrace(c.indexes[j], index, true)
+		//}
+		//if c.indexes[j] == 324 && index == 360 {
+		//	c.root.CmpTrace(c.indexes[j], index, true)
+		//}
+
+		stemVal := c.root.FindStem(c.indexes[j], index)
+		crownVal := c.root.Cmp(c.indexes[j], index)
+		values[valueIndex] = crownVal + stemVal
+	}
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
-	localIndex := len(c.indexes)-1
+	c.add(len(c.indexes)-1)
+}
 
-	var maxN int = -1
-	var maxVal float32
+func (c *StemCluster) maxAttachCluster(localIndex int, exceptClusters ... int) (clusterIndex int, maxRate float32) {
+	clusterIndex = -1
 	// find max match to existing bags
 	for n, cluster := range c.clusters {
-		if val := cluster.Rate(localIndex); val > maxVal {
-			maxN = n
-			maxVal = val
+		if isin(n, exceptClusters) {
+			continue
+		}
+
+		if val := cluster.attachRate(localIndex); val > maxRate {
+			clusterIndex = n
+			maxRate = val
+		}
+	}
+	return
+}
+
+func (c *StemCluster) add(localIndex int, exceptClusters ... int) {
+	if c.indexes[localIndex] == 172 || c.indexes[localIndex] == 388 || c.indexes[localIndex] == 418 || c.indexes[localIndex] == 1032 {
+		fmt.Println()
+	}
+
+	maxN, maxVal := c.maxAttachCluster(localIndex, exceptClusters...)
+	var addedSuccessfully bool
+	if maxN > -1 {
+		bestMatchingCluster := c.clusters[maxN]
+		attachDelta := bestMatchingCluster.attachDelta(maxVal)
+		addedSuccessfully = attachDelta > 0
+		if addedSuccessfully {
+			bestMatchingCluster.attach(maxVal, localIndex)
+			detachedCrownIndex, detachDelta, rateAfterDetachment := bestMatchingCluster.detachRate()
+			if detachedCrownIndex > -1 &&
+				bestMatchingCluster.indexes[detachedCrownIndex] != localIndex { // cannot detach what have just been attached
+				if detachDelta > 0 {
+					c.add(bestMatchingCluster.indexes[detachedCrownIndex], maxN)
+					bestMatchingCluster.detach(rateAfterDetachment, detachedCrownIndex)
+				} else if len(c.clusters) > 1 { // are there alternatives
+					nextMaxN, maxAttachRate := c.maxAttachCluster(bestMatchingCluster.indexes[detachedCrownIndex], maxN)
+					if nextMaxN > -1 {
+						nextBestMatchingCluster := c.clusters[nextMaxN]
+						maxAttachDelta := nextBestMatchingCluster.attachDelta(maxAttachRate)
+						if (maxAttachDelta + detachDelta) > 0 {
+							nextBestMatchingCluster.attach(maxAttachRate, bestMatchingCluster.indexes[detachedCrownIndex])
+							bestMatchingCluster.detach(rateAfterDetachment, detachedCrownIndex)
+						}
+					}
+				}
+			}
 		}
 	}
 
 	// not successful putting into any existing bag
-	if maxN == -1 || !c.clusters[maxN].Add(maxVal, localIndex) {
+	if maxN == -1 || !addedSuccessfully {
 		c.clusters = append(c.clusters, &CrownCluster{
 			indexes: []int{localIndex},
 			rate:    1,
@@ -110,6 +172,9 @@ func (c *StemCluster) AddFirst(index int) bool {
 func (c *StemCluster) Add(index int) bool {
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		for _, existingIdx := range c.stemIndexes {
+			if index == 388 && existingIdx == 352 {
+				fmt.Println()
+			}
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
 				c.root.matrix[index][existingIdx] = val
 			}
@@ -150,4 +215,13 @@ func (c *StemCluster) Get(i, j int) float32 {
 		return c.values[i][diff]
 	}
 	return 0
+}
+
+func (c *StemCluster) Find(idx int) int {
+	for i, index := range c.indexes {
+		if index == idx {
+			return i
+		}
+	}
+	return -1
 }

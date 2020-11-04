@@ -171,9 +171,26 @@ func (rs *RootCluster) Add(index int) bool {
 }
 
 func (rs *RootCluster) Results() []*Series {
+	athings := rs.Arena.Find("tr", "class", "athing")
+
 	var crownClusters = make([]*CrownCluster, 0)
 	for _, stemCluster := range rs.clusters {
 		for _, crownCluster := range stemCluster.clusters {
+			if crownCluster.HasUnresolved(athings[0]) {
+				for _, a := range athings {
+					fmt.Println(crownCluster.stem.Find(a), a)
+				}
+
+				fmt.Println("--------------")
+
+				for _, a := range athings {
+					if !crownCluster.HasUnresolved(a) {
+						fmt.Println(crownCluster.stem.Find(a), a)
+					}
+				}
+				fmt.Println()
+			}
+
 			crownCluster.resolveIndexes()
 			crownClusters = append(crownClusters, crownCluster)
 		}
@@ -184,6 +201,10 @@ func (rs *RootCluster) Results() []*Series {
 
 	tables := make([]Table, len(crownClusters))
 	for i, cluster := range crownClusters {
+		//if cluster.Has(athings[29]) {
+		//	fmt.Println()
+		//}
+
 		tables[i] = cluster.toTable()
 	}
 

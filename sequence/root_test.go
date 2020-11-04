@@ -80,7 +80,7 @@ func TestRootCluster_Batch(t *testing.T) {
 func TestRootCluster_LoadFile(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()//.SetLimit(10)
-	err := r.LoadFile("../rozetka.html")
+	err := r.LoadFile("../bin/samples/rozetka.html")
 	a.NoError(err)
 	series := r.Batch().Results()
 	for i, s := range series {

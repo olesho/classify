@@ -22,6 +22,15 @@ func (c *CrownCluster) Has(index int) bool {
 	return false
 }
 
+func (c *CrownCluster) HasUnresolved(index int) bool {
+	for _, nextIndex := range c.indexes {
+		if c.stem.indexes[nextIndex] == index {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *CrownCluster) resolveIndexes() {
 	for i, index := range c.indexes {
 		c.indexes[i] = c.stem.indexes[index]
@@ -41,17 +50,77 @@ func (c *CrownCluster) Volume() float32 {
 	return float32(len(c.indexes)) * c.rate
 }
 
-func (c *CrownCluster) Add(rate float32, localIndex int) bool {
-	volume, nextVolume := float32(len(c.indexes)) * c.rate, rate * float32(len(c.indexes)+1)
-	if volume < nextVolume {
-		c.rate = rate
-		c.indexes = append(c.indexes, localIndex)
-		return true
-	}
-	return false
+func (c *CrownCluster) attachDelta(newRate float32) float32 {
+	return newRate * float32(len(c.indexes)+1) - float32(len(c.indexes)) * c.rate
 }
 
-func (c *CrownCluster) Rate(stemIndex int) float32 {
+func (c *CrownCluster) attach(rate float32, localIndex int)  {
+	//if isin(localIndex, c.indexes) {
+	//	fmt.Println()
+	//}
+
+	c.rate = rate
+	c.indexes = append(c.indexes, localIndex)
+}
+
+func (c *CrownCluster) detach(rate float32, localIndex int)  {
+	c.rate = rate
+	c.indexes = append(c.indexes[:localIndex], c.indexes[localIndex+1:]...)
+}
+
+func (c *CrownCluster) detachRate() (crownIndex int, delta, nextRate float32) {
+	if len(c.indexes) > 2 {
+		var lowestIndex = -1
+		var lowestSum float32
+
+		for n, i := range c.indexes {
+			var sum float32
+			for _, j := range c.indexes {
+				if i != j {
+					sum += c.stem.Get(i, j)
+				}
+			}
+			if lowestSum == 0 {
+				lowestSum = sum
+				lowestIndex = n
+			} else {
+				if sum < lowestSum {
+					lowestSum = sum
+					lowestIndex = n
+				}
+			}
+		}
+
+		var secondLowestRate float32
+		for n, i := range c.indexes {
+			if lowestIndex != n {
+				for m, j := range c.indexes {
+					if lowestIndex != m && i != j {
+						val := c.stem.Get(i, j)
+						if secondLowestRate == 0 {
+							secondLowestRate = val
+						} else {
+							if val < secondLowestRate{
+								secondLowestRate = val
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return lowestIndex, secondLowestRate*float32(len(c.indexes)-1) - c.rate * float32(len(c.indexes)), secondLowestRate
+		//if secondLowestRate*float32(len(c.indexes)-1) > c.rate * float32(len(c.indexes)) {
+		//	r := c.indexes[lowestIndex]
+		//	c.indexes = append(c.indexes[:lowestIndex], c.indexes[lowestIndex+1:]...)
+		//	c.rate = secondLowestRate
+		//	return r
+		//}
+	}
+	return -1, 0, 0
+}
+
+func (c *CrownCluster) attachRate(stemIndex int) float32 {
 	var lowestVal float32
 	var i int
 	if len(c.indexes) > c.stem.root.limit {
