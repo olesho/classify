@@ -1,10 +1,11 @@
 package sequence
 
 import (
-	"fmt"
 	"github.com/olesho/classify/comparator"
+	"runtime"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type ending struct {
@@ -18,7 +19,6 @@ type StemCluster struct {
 
 	endings []ending
 	stemIndexes []int
-	//stemValues [][]float32
 
 	clusters []*CrownCluster
 
@@ -38,48 +38,28 @@ func (c *StemCluster) addWithCrown(index int) {
 	}
 
 	//async
-	//atomicIndex := new(int32)
-	//*atomicIndex = -1
-	//wg := sync.WaitGroup{}
-	//wg.Add(runtime.NumCPU())
-	//for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-	//	go func() {
-	//		for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
-	//			j := len(c.indexes) - valueIndex - 1
-	//
-	//			//if c.indexes[j] == 388 && index == 352 {
-	//			//	fmt.Println()
-	//			//}
-	//
-	//			values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
-	//		}
-	//		wg.Done()
-	//	}()
-	//}
-	//wg.Wait()
+	atomicIndex := new(int32)
+	*atomicIndex = -1
+	wg := sync.WaitGroup{}
+	wg.Add(runtime.NumCPU())
+	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+		go func() {
+			for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
+				j := len(c.indexes) - valueIndex - 1
+				values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 
 	////sync
-	for valueIndex := range values {
-		j := len(c.indexes) - valueIndex - 1
-
-		if c.indexes[j] == 352 && index == 388 {
-			c.root.CmpTrace(c.indexes[j], index, true)
-		}
-		if c.indexes[j] == 316 && index == 352 {
-			c.root.CmpTrace(c.indexes[j], index, true)
-		}
-
-		//if c.indexes[j] == 360 && index == 396 {
-		//	c.root.CmpTrace(c.indexes[j], index, true)
-		//}
-		//if c.indexes[j] == 324 && index == 360 {
-		//	c.root.CmpTrace(c.indexes[j], index, true)
-		//}
-
-		stemVal := c.root.FindStem(c.indexes[j], index)
-		crownVal := c.root.Cmp(c.indexes[j], index)
-		values[valueIndex] = crownVal + stemVal
-	}
+	//for valueIndex := range values {
+	//	j := len(c.indexes) - valueIndex - 1
+	//	stemVal := c.root.FindStem(c.indexes[j], index)
+	//	crownVal := c.root.Cmp(c.indexes[j], index)
+	//	values[valueIndex] = crownVal + stemVal
+	//}
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
@@ -103,10 +83,6 @@ func (c *StemCluster) maxAttachCluster(localIndex int, exceptClusters ... int) (
 }
 
 func (c *StemCluster) add(localIndex int, exceptClusters ... int) {
-	if c.indexes[localIndex] == 172 || c.indexes[localIndex] == 388 || c.indexes[localIndex] == 418 || c.indexes[localIndex] == 1032 {
-		fmt.Println()
-	}
-
 	maxN, maxVal := c.maxAttachCluster(localIndex, exceptClusters...)
 	var addedSuccessfully bool
 	if maxN > -1 {
@@ -172,9 +148,9 @@ func (c *StemCluster) AddFirst(index int) bool {
 func (c *StemCluster) Add(index int) bool {
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		for _, existingIdx := range c.stemIndexes {
-			if index == 388 && existingIdx == 352 {
-				fmt.Println()
-			}
+			//if index == 388 && existingIdx == 352 {
+			//	fmt.Println()
+			//}
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
 				c.root.matrix[index][existingIdx] = val
 			}

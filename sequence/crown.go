@@ -55,11 +55,9 @@ func (c *CrownCluster) attachDelta(newRate float32) float32 {
 }
 
 func (c *CrownCluster) attach(rate float32, localIndex int)  {
-	//if isin(localIndex, c.indexes) {
-	//	fmt.Println()
-	//}
-
-	c.rate = rate
+	if len(c.indexes) == 2 || rate < c.rate {
+		c.rate = rate
+	}
 	c.indexes = append(c.indexes, localIndex)
 }
 
@@ -110,14 +108,36 @@ func (c *CrownCluster) detachRate() (crownIndex int, delta, nextRate float32) {
 		}
 
 		return lowestIndex, secondLowestRate*float32(len(c.indexes)-1) - c.rate * float32(len(c.indexes)), secondLowestRate
-		//if secondLowestRate*float32(len(c.indexes)-1) > c.rate * float32(len(c.indexes)) {
-		//	r := c.indexes[lowestIndex]
-		//	c.indexes = append(c.indexes[:lowestIndex], c.indexes[lowestIndex+1:]...)
-		//	c.rate = secondLowestRate
-		//	return r
-		//}
 	}
 	return -1, 0, 0
+}
+
+type pair struct {
+	index int
+	val float32
+}
+
+func (c *CrownCluster) extend() {
+	var pairs = make([]pair, 0, len(c.stem.indexes))
+	for i := range c.stem.indexes {
+		if !c.Has(i) {
+			pairs = append(pairs, pair{index: i, val: c.attachRate(i)})
+		}
+	}
+
+	sort.Slice(pairs, func (i, j int) bool {
+		return pairs[i].val > pairs[j].val
+	})
+
+	for _, pair := range pairs {
+		delta := c.attachDelta(pair.val)
+		if delta > 0 {
+			c.attach(pair.val, pair.index)
+		} else {
+			break
+		}
+	}
+	sort.Ints(c.indexes)
 }
 
 func (c *CrownCluster) attachRate(stemIndex int) float32 {
