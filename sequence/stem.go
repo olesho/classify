@@ -148,9 +148,6 @@ func (c *StemCluster) AddFirst(index int) bool {
 func (c *StemCluster) Add(index int) bool {
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		for _, existingIdx := range c.stemIndexes {
-			//if index == 388 && existingIdx == 352 {
-			//	fmt.Println()
-			//}
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
 				c.root.matrix[index][existingIdx] = val
 			}

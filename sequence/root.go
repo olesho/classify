@@ -185,7 +185,8 @@ func (rs *RootCluster) Results() []*Series {
 
 	tables := make([]Table, len(crownClusters))
 	for i, cluster := range crownClusters {
-		tables[i] = cluster.toTable()
+		t := cluster.toTable()
+		tables[i] = t
 	}
 
 	clusterGroups := groupClusters(rs.Arena, tables)

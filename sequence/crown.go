@@ -251,11 +251,11 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 	size1, size2 := len(n1.Children), len(templateNode.Children)
 	ratingMatrixSize := size1 * size2
 	if ratingMatrixSize > 0 {
-		rating := make([]mergeItem, ratingMatrixSize)
+		rating := make([]mergeItem, 0, ratingMatrixSize)
 		for i2, idx2 := range templateNode.Children {
 			templateChildNodeGroupIDs := templateArena.Get(idx2).Ext.(*Additional).GroupIds
 			for i1, idx1 := range n1.Children {
-				idx := (i1+1)*(i2+1) - 1
+				//idx := (i1+1)*(i2+1) - 1
 
 				var sum float32
 				cnt := 0
@@ -265,12 +265,16 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 						cnt++
 					}
 				}
-				if cnt > 0 {
-					rating[idx].Similarity = sum / float32(cnt)
+
+				item := mergeItem{
+					Index1: i1,
+					Index2: i2,
 				}
 
-				rating[idx].Index1 = i1
-				rating[idx].Index2 = i2
+				if cnt > 0 {
+					item.Similarity = sum / float32(cnt)
+				}
+				rating = append(rating, item)
 			}
 		}
 

@@ -100,12 +100,15 @@ func TestRootCluster_Hackernews(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()//.SetLimit(10)
 	//err := r.LoadFile("../bin/samples/ycomb.html")
-	err := r.LoadFile("../bin/samples/hn.html")
+	err := r.LoadFile("../bin/samples/habr1.html")
 	a.NoError(err)
 	series := r.Batch().Results()
 	for i, s := range series {
-		if s.Group.Size == 30 {
+		if s.Group.Size == 20 {
 			fmt.Println(i)
+			for _, f := range s.TransposedFields {
+				fmt.Println(f)
+			}
 		}
 	}
 }
