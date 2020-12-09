@@ -46,9 +46,9 @@ Sample HTML input:
         <section> 
             <h2> Some Menu </h2>
             <ul>
-                <li>Item 1</li>
-                <li>Item 2</li>
-                <li>Item 3</li>
+                <li>Menu Item 1</li>
+                <li>Menu Item 2</li>
+                <li>Menu Item 3</li>
             </ul>
         </section>
     </body>
@@ -125,7 +125,25 @@ XPath pattern generation is still being developed:
 /html/body/section/div/@text=
 ```
 
-### Extracting from CURL or Chrome:
+### Multiple groups of data:
+Data is being extracted and ranked by volume with indexes 0 1 2 ... In case you need to access other groups put the index after ```fields```.
+
+From example above ```fields -csv 1``` will produce following output:
+```
+Menu Item 1
+Menu Item 2
+Menu Item 3
+``` 
+
+### Extracting from other sources:
 Input data could be any URL or file.
 ```curl -s YOUR_URL_HERE | fields ```
-Keep in mind that some websites use dynamic content extensively. So CURLed version might differ significantly from the one you see in the browser. You might want to use: ```chromium --dump-dom 'YOUR_URL_HERE' | fields``` or ```google-chrome --dump-dom 'YOUR_URL_HERE' | fields``` instead of CURL 
+Keep in mind that some websites use dynamic content extensively. So CURLed version might differ significantly from the one you see in the browser. You might want to use: ```chromium --dump-dom 'YOUR_URL_HERE' | fields``` or ```google-chrome --dump-dom 'YOUR_URL_HERE' | fields``` instead of CURL.
+
+### Shell
+For debugging purposes there is a command line tool:
+```
+cd bin/cshell
+go build .
+./cshell
+```
