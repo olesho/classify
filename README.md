@@ -126,7 +126,7 @@ XPath pattern generation is still being developed:
 ```
 
 ### Multiple groups of data:
-Data is being extracted and ranked by volume with indexes 0 1 2 ... In case you need to access other groups put the index after ```fields```.
+Data is being extracted and ranked descending by volume with indexes 0, 1, 2 ... In case you need to access other groups put the index N like: ```fields N```
 
 From example above ```fields -csv 1``` will produce following output:
 ```
@@ -134,6 +134,7 @@ Menu Item 1
 Menu Item 2
 Menu Item 3
 ``` 
+Menu items take less volume and are ranked after main data block.
 
 ### Extracting from other sources:
 Input data could be any URL or file.
