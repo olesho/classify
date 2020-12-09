@@ -192,10 +192,6 @@ func (rs *RootCluster) Results() []*Series {
 	// transpose
 	rm := make([]*Series, len(clusterGroups))
 	for i, g := range clusterGroups {
-		if g.Size == 60 {
-			fmt.Println()
-		}
-
 		rm[i] = removeEqualFields(transpose(g))
 		rm[i].Arena = rs.Arena
 		rm[i].Group.Volume = rateSeries(rm[i])

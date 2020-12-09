@@ -69,17 +69,17 @@ var testDoc2 = `
             <div>
                 <h3> Title 1 </h3>
                 <p> Some text 1 </p>
-                <img src="/src1"> </img>
+                <img src="/src1"> image1 </img>
             </div>
             <div>
                 <h3> Title 2 </h3>
                 <p> Some text 2 </p>
-                <img src="/src1"> </img>
+                <img src="/src2"> image2 </img>
             </div>
             <div>
                 <h3> Title 3 </h3>
                 <p> Some text 3 </p>
-                <img src="/src1"> </img>
+                <img src="/src3"> image3 </img>
             </div>
         </section>
         <section> 
