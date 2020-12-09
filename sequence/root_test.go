@@ -60,6 +60,40 @@ var testDoc1 = `
 	</html>
 `
 
+var testDoc2 = `
+<html>
+    <body>
+        <section> Some Ad </section>
+        <section> 
+            <h1> Data </h1> 
+            <div>
+                <h3> Title 1 </h3>
+                <p> Some text 1 </p>
+                <img src="/src1"> </img>
+            </div>
+            <div>
+                <h3> Title 2 </h3>
+                <p> Some text 2 </p>
+                <img src="/src1"> </img>
+            </div>
+            <div>
+                <h3> Title 3 </h3>
+                <p> Some text 3 </p>
+                <img src="/src1"> </img>
+            </div>
+        </section>
+        <section> 
+            <h2> Some Menu </h2>
+            <ul>
+                <li>Item 1</li>
+                <li>Item 2</li>
+                <li>Item 3</li>
+            </ul>
+        </section>
+    </body>
+</html>
+`
+
 func TestRootCluster_Batch(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()
@@ -72,6 +106,19 @@ func TestRootCluster_Batch(t *testing.T) {
 		if len(c.indexes) != len(c.stemIndexes) {
 			t.Error("bad")
 		}
+	}
+
+	fmt.Println(r)
+}
+
+func TestRootCluster_Batch2(t *testing.T) {
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadString(testDoc2)
+	a.NoError(err)
+
+	for _, s := range r.Batch().Results() {
+		fmt.Println(s.TransposedFields)
 	}
 
 	fmt.Println(r)

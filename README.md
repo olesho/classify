@@ -4,7 +4,94 @@ Classify is an efficient tool for extraction of structured field sequences from 
 
 ## When is this useful
 
-Classify allows to create scraping/parsing solution for specific data source and do it quickly.
+Classify allows to create scraping/parsing pattern for specific data source and do it quickly.
+
+Sample HTML:
+```
+<html>
+    <body>
+        <section> Some Ad </section>
+        <section> 
+            <h1> Data </h1> 
+            <div>
+                <h3> Title 1 </h3>
+                <p> Some text 1 </p>
+                <img src="/src1"> </img>
+            </div>
+            <div>
+                <h3> Title 2 </h3>
+                <p> Some text 2 </p>
+                <img src="/src1"> </img>
+            </div>
+            <div>
+                <h3> Title 3 </h3>
+                <p> Some text 3 </p>
+                <img src="/src1"> </img>
+            </div>
+        </section>
+        <section> 
+            <h2> Some Menu </h2>
+            <ul>
+                <li>Item 1</li>
+                <li>Item 2</li>
+                <li>Item 3</li>
+            </ul>
+        </section>
+    </body>
+</html>
+```
+
+Sample text output after running:
+
+```fields```
+```
+Title 1
+Some text 1
+image1
+--------------------------
+Title 2
+Some text 2
+image2
+--------------------------
+Title 3
+Some text 3
+image3
+--------------------------
+```
+
+```fields -json```
+```
+{
+  "fields": [
+    [
+      "Title 1",
+      "Some text 1",
+      "image1"
+    ],
+    [
+      "Title 2",
+      "Some text 2",
+      "image2"
+    ],
+    [
+      "Title 3",
+      "Some text 3",
+      "image3"
+    ]
+  ],
+  "stats": {
+    "groups_count": 3,
+    "group_fields_count": 3
+  }
+}
+```
+
+```fields -csv```
+```
+Title 1,Some text 1,image1
+Title 2,Some text 2,image2
+Title 3,Some text 3,image3
+```
 
 ## Requirements
 

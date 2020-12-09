@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/olesho/classify/sequence"
@@ -45,6 +46,9 @@ func main() {
 			} else if os.Args[i] == "-text" {
 				textOutput(series[rank])
 				break
+			} else if os.Args[i] == "-csv" {
+				csvOutput(series[rank])
+				break
 			}
 		}
 
@@ -73,6 +77,16 @@ func jsonOutput(s *sequence.Series) {
 	}
 }
 
+func csvOutput(s *sequence.Series) {
+	w := csv.NewWriter(os.Stdout)
+	for _, fields := range s.TransposedFields {
+		if err := w.Write(fields); err != nil {
+			panic(err)
+		}
+	}
+	w.Flush()
+}
+
 func textOutput(s *sequence.Series) {
 	if reversedOrder {
 		for i := len(s.TransposedFields)-1; i > -1; i-- {
@@ -80,14 +94,14 @@ func textOutput(s *sequence.Series) {
 			for _, field := range fields {
 				fmt.Println(field)
 			}
-			fmt.Println("_________________________________________________")
+			fmt.Println("--------------------------")
 		}
 	} else {
 		for _, fields := range s.TransposedFields {
 			for _, field := range fields {
 				fmt.Println(field)
 			}
-			fmt.Println("_________________________________________________")
+			fmt.Println("--------------------------")
 		}
 	}
 }
