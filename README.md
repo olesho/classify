@@ -14,7 +14,7 @@ Go 1.13+
 
 ```
 go get github.com/olesho/classify/sequence
-cd bin/fields
+cd classify/bin/fields
 go install
 ```
 
