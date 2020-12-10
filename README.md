@@ -13,7 +13,7 @@ Go 1.13+
 ## Installation
 
 ```
-git clone https://github.com/olesho/classify
+go get github.com/olesho/classify/sequence
 cd bin/fields
 go install
 ```
