@@ -34,15 +34,6 @@ func main() {
 				return
 			}
 
-			//f, _, err := r.FormFile("1")
-			//if err != nil {
-			//	http.Error(w, "failed to open metadata", http.StatusBadRequest)
-			//	return
-			//}
-
-			//metadata, _ := ioutil.ReadAll(f)
-			//fmt.Println(metadata)
-
 			cluster := sequence.NewRootCluster()
 			// Media files
 
@@ -137,7 +128,7 @@ func textOutput(s *sequence.Series, w http.ResponseWriter) {
 		for _, field := range fields {
 			w.Write([]byte(fmt.Sprintln(field)))
 		}
-		w.Write([]byte("--------------------------"))
+		w.Write([]byte("--------------------------\n"))
 	}
 }
 

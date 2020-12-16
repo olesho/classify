@@ -107,8 +107,6 @@ func TestRootCluster_Batch(t *testing.T) {
 			t.Error("bad")
 		}
 	}
-
-	fmt.Println(r)
 }
 
 func TestRootCluster_Batch2(t *testing.T) {
@@ -120,14 +118,12 @@ func TestRootCluster_Batch2(t *testing.T) {
 	for _, s := range r.Batch().Results() {
 		fmt.Println(s.TransposedFields)
 	}
-
-	fmt.Println(r)
 }
 
 func TestRootCluster_LoadFile(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()//.SetLimit(10)
-	err := r.LoadFile("../rozetka.html")
+	err := r.LoadFile("/home/keyboardcat/classify/rozetka/rozetka1.html")
 	a.NoError(err)
 	series := r.Batch().Results()
 	for i, s := range series {
@@ -160,12 +156,12 @@ func TestRootCluster_Hackernews(t *testing.T) {
 
 func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster().SetLimit(20)
-	err := r.LoadFile("../rozetka1.html")
+	r := NewRootCluster()//.SetLimit(20)
+	err := r.LoadFile("/home/keyboardcat/classify/rozetka/rozetka1.html")
 	a.NoError(err)
-	err = r.LoadFile("../rozetka2.html")
+	err = r.LoadFile("/home/keyboardcat/classify/rozetka/rozetka2.html")
 	a.NoError(err)
-	err = r.LoadFile("../rozetka3.html")
+	err = r.LoadFile("/home/keyboardcat/classify/rozetka/rozetka1.html")
 	a.NoError(err)
 
 	series := r.Batch().Results()

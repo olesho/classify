@@ -3,7 +3,6 @@ package sequence
 import (
 	"github.com/olesho/classify/comparator"
 	"runtime"
-	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -16,13 +15,8 @@ type ending struct {
 type StemCluster struct {
 	indexes []int
 	values [][]float32
-
-	endings []ending
 	stemIndexes []int
-	//stemValues [][]float32
-
 	clusters []*CrownCluster
-
 	strictComparator comparator.Comparator
 	elementComparator comparator.Comparator
 	root *RootCluster
@@ -97,39 +91,32 @@ func (c *StemCluster) AddFirst(index int) bool {
 			stem:    c,
 		})
 	} else {
-		c.endings = []ending{
-			{
-				index: index,
-				last:  c.root.Arena.Get(index).Ext.(*Additional).LastDescendant,
-			},
-		}
+		//c.endings = []ending{
+		//	{
+		//		index: index,
+		//		last:  c.root.Arena.Get(index).Ext.(*Additional).LastDescendant,
+		//	},
+		//}
+		c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
+
+		//c.lastEnding = index
+		//c.lastEndingDescendant = c.root.Arena.Get(index).Ext.(*Additional).LastDescendant
 	}
 	return true
 }
 
 func (c *StemCluster) Add(index int) bool {
+	// if element with index fits stem cluster
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		for _, existingIdx := range c.stemIndexes {
+			// calculate element fits to each existing element of cluster
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
 				c.root.matrix[index][existingIdx] = val
 			}
-			// this should never happen
-			//} else {
-			//	return false
-			//}
 		}
+		// append to cluster
 		c.stemIndexes = append(c.stemIndexes, index)
-		//c.stemValues = append(c.stemValues, values)
-
-		c.m.Lock()
-		c.endings = append(c.endings, ending{
-			index: index,
-			last:  c.root.Arena.Get(index).Ext.(*Additional).LastDescendant,
-		})
-		sort.Slice(c.endings, func(i, j int) bool {
-			return c.endings[i].last > c.endings[j].last
-		})
-		c.m.Unlock()
+		c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
 		return true
 	}
 	return false
