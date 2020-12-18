@@ -166,27 +166,6 @@ func (rs *RootCluster) consumeNotifications() {
 	}
 }
 
-func (rs *crownConsumer) consumeNotificationsAsync() {
-	rs.wg.Add(runtime.NumCPU())
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go func(){
-			for range rs.stemIndexDone {
-				rs.awaitingLock.Lock()
-				for i, awaiting := range rs.awaitingCompareCrown {
-					if awaiting.stemCluster != nil {
-						if rs.lastNotified >= awaiting.lastDescendant {
-							awaiting.stemCluster.addWithCrown(awaiting.index)
-							rs.awaitingCompareCrown[i].stemCluster = nil
-						}
-					}
-				}
-				rs.awaitingLock.Unlock()
-			}
-			rs.wg.Done()
-		}()
-	}
-}
-
 func (rs *RootCluster) Add(index int) {
 	// try add into one of existing bags
 	var i int
