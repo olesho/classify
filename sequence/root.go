@@ -211,7 +211,8 @@ func (rs *RootCluster) Results() []*Series {
 	// transpose
 	rm := make([]*Series, len(clusterGroups))
 	for i, g := range clusterGroups {
-		rm[i] = removeEqualFields(transpose(g))
+		//rm[i] = removeEqualFields(transpose(g))
+		rm[i] = transpose(g)
 		rm[i].Arena = rs.Arena
 		rm[i].Group.Volume = rateSeries(rm[i])
 	}
@@ -289,11 +290,3 @@ func (rs *RootCluster) FindCrown(idx1, idx2 int) float32 {
 
 	return c2.Get(i, j)
 }
-
-//func (rs *RootCluster) String() string {
-//	res := ""
-//	for _, crownCluster := range rs.Results() {
-//		res += fmt.Sprintln(crownCluster)
-//	}
-//	return res
-//}

@@ -94,6 +94,40 @@ var testDoc2 = `
 </html>
 `
 
+var testDoc3 = `
+<html>
+    <body>
+        <section> Some Ad </section>
+        <section> 
+            <h1> Data </h1> 
+            <div>
+                <h3> Title 4 </h3>
+                <p> Some text 4 </p>
+                <img src="/src4"> image1 </img>
+            </div>
+            <div>
+                <h3> Title 5 </h3>
+                <p> Some text 5 </p>
+                <img src="/src5"> image2 </img>
+            </div>
+            <div>
+                <h3> Title 6 </h3>
+                <p> Some text 6 </p>
+                <img src="/src6"> image3 </img>
+            </div>
+        </section>
+        <section> 
+            <h2> Some Menu </h2>
+            <ul>
+                <li>Item 1</li>
+                <li>Item 2</li>
+                <li>Item 3</li>
+            </ul>
+        </section>
+    </body>
+</html>
+`
+
 func TestRootCluster_Batch(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()
@@ -113,6 +147,20 @@ func TestRootCluster_Batch2(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()
 	err := r.LoadString(testDoc2)
+	a.NoError(err)
+
+	for _, s := range r.Batch().Results() {
+		fmt.Println(s.TransposedFields)
+	}
+}
+
+func TestRootCluster_BatchMultiple(t *testing.T) {
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadString(testDoc2)
+	a.NoError(err)
+
+	err = r.LoadString(testDoc3)
 	a.NoError(err)
 
 	for _, s := range r.Batch().Results() {
@@ -195,7 +243,7 @@ func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 
 	series := r.Batch().Results()
 	for i, s := range series {
-		if s.Group.Size == 180 {
+		if len(s.TransposedFields) == 180 {
 			fmt.Println(i)
 		}
 	}
