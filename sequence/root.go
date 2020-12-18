@@ -139,6 +139,7 @@ func (rs *RootCluster) Batch() *RootCluster {
 		}()
 	}
 	wg.Wait()
+
 	rs.consumeNotifications()
 	return rs
 }
@@ -202,9 +203,28 @@ func (rs *RootCluster) Results() []*Series {
 	})
 
 	tables := make([]Table, len(crownClusters))
-	for i, cluster := range crownClusters {
-		tables[i] = cluster.toTable()
+
+	atomicIndex := new(int32)
+	*atomicIndex = -1
+	wg := sync.WaitGroup{}
+	wg.Add(runtime.NumCPU())
+	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+		go func() {
+			for {
+				valueIndex := int(atomic.AddInt32(atomicIndex, 1))
+				if valueIndex >= len(crownClusters) {
+					break
+				}
+				tables[valueIndex] = crownClusters[valueIndex].toTable()
+			}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+
+	//for i, cluster := range crownClusters {
+	//	tables[i] = cluster.toTable()
+	//}
 
 	clusterGroups := groupClusters(rs.Arena, tables)
 
