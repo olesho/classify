@@ -101,31 +101,55 @@ func (c *StemCluster) AddFirst(index int)  {
 }
 
 func (c *StemCluster) Add(index int) bool {
-	//c.m.Lock()
-	fitting := c.strictComparator.Cmp(c.stemIndexes[0], index)
-	//c.m.Unlock()
-	// if element with index fits stem cluster
-	if fitting > 0 {
-		for _, existingIdx := range c.stemIndexes {
-			// calculate element fits to each existing element of cluster
-			val := c.elementComparator.Cmp(index, existingIdx)
-			if val > 0 {
-				if existingIdx < index {
-					c.root.matrix[index][existingIdx] = val
-				} else {
-					c.root.matrix[existingIdx][index] = val
-				}
+	c.m.Lock()
+	defer c.m.Unlock()
+	for _, existingIdx := range c.stemIndexes {
+		// calculate element fits to each existing element of cluster
+		//c.m.Lock()
+		val := c.elementComparator.Cmp(index, existingIdx)
+		//c.m.Unlock()
+		if val > 0 {
+			if existingIdx < index {
+				c.root.matrix[index][existingIdx] = val
+			} else {
+				c.root.matrix[existingIdx][index] = val
 			}
-		}
-		// append to cluster
-		c.m.Lock()
-		defer c.m.Unlock()
-		c.stemIndexes = append(c.stemIndexes, index)
-		//c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
-		return true
+		} else { return false}
 	}
-	return false
+	// append to cluster
+	//c.m.Lock()
+	c.stemIndexes = append(c.stemIndexes, index)
+	//c.m.Unlock()
+	return true
 }
+
+
+//func (c *StemCluster) Add(index int) bool {
+//	//c.m.Lock()
+//	fitting := c.strictComparator.Cmp(c.stemIndexes[0], index)
+//	//c.m.Unlock()
+//	// if element with index fits stem cluster
+//	if fitting > 0 {
+//		for _, existingIdx := range c.stemIndexes {
+//			// calculate element fits to each existing element of cluster
+//			val := c.elementComparator.Cmp(index, existingIdx)
+//			if val > 0 {
+//				if existingIdx < index {
+//					c.root.matrix[index][existingIdx] = val
+//				} else {
+//					c.root.matrix[existingIdx][index] = val
+//				}
+//			}
+//		}
+//		// append to cluster
+//		c.m.Lock()
+//		defer c.m.Unlock()
+//		c.stemIndexes = append(c.stemIndexes, index)
+//		//c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
+//		return true
+//	}
+//	return false
+//}
 
 func (c *StemCluster) Get(i, j int) float32 {
 	if i < j {

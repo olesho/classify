@@ -180,8 +180,8 @@ func (rs *RootCluster) Add(index int) {
 	stemCluster := rs.newStemCluster(index)
 	rs.nodeIDToCluster[index] = stemCluster
 
-	rs.m.Lock()
-	defer rs.m.Unlock()
+	//rs.m.Lock()
+	//defer rs.m.Unlock()
 	rs.clusters = append(rs.clusters, stemCluster)
 	return
 }
