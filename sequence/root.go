@@ -170,8 +170,11 @@ func (rs *RootCluster) Add(index int) {
 	// try add into one of existing bags
 	var i int
 	for i = 0; i < len(rs.clusters); i++ {
-		if rs.clusters[i].Add(index) {
-			rs.nodeIDToCluster[index] = rs.clusters[i]
+		rs.m.Lock()
+		next := rs.clusters[i]
+		rs.m.Unlock()
+		if next.Add(index) {
+			rs.nodeIDToCluster[index] = next
 			return
 		}
 	}

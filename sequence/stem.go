@@ -101,9 +101,7 @@ func (c *StemCluster) AddFirst(index int)  {
 }
 
 func (c *StemCluster) Add(index int) bool {
-	c.root.m.Lock()
 	firstIdx := c.stemIndexes[0]
-	c.root.m.Unlock()
 	fitting := c.strictComparator.Cmp(firstIdx, index)
 	// if element with index fits stem cluster
 	if fitting > 0 {
