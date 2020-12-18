@@ -103,11 +103,19 @@ func (c *StemCluster) AddFirst(index int)  {
 func (c *StemCluster) Add(index int) bool {
 	c.m.Lock()
 	defer c.m.Unlock()
-	for _, existingIdx := range c.stemIndexes {
-		// calculate element fits to each existing element of cluster
-		//c.m.Lock()
+	
+	firstIndex := c.stemIndexes[0]
+	val := c.strictComparator.Cmp(firstIndex, index)
+	if val <= 0 {
+		return false
+	}
+	if firstIndex < index {
+		c.root.matrix[index][firstIndex] = val
+	} else {
+		c.root.matrix[firstIndex][index] = val
+	}
+	for _, existingIdx := range c.stemIndexes[1:] {
 		val := c.elementComparator.Cmp(index, existingIdx)
-		//c.m.Unlock()
 		if val > 0 {
 			if existingIdx < index {
 				c.root.matrix[index][existingIdx] = val
@@ -116,13 +124,9 @@ func (c *StemCluster) Add(index int) bool {
 			}
 		} else { return false}
 	}
-	// append to cluster
-	//c.m.Lock()
 	c.stemIndexes = append(c.stemIndexes, index)
-	//c.m.Unlock()
 	return true
 }
-
 
 //func (c *StemCluster) Add(index int) bool {
 //	//c.m.Lock()
