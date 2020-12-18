@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type crownConsumer struct {
@@ -33,23 +34,14 @@ type RootCluster struct {
 	elementComparator comparator.Comparator
 
 	consumer *crownConsumer
+
+	m sync.Mutex
 }
 
 type compareCrown struct {
 	stemCluster *StemCluster
 	index int
 	lastDescendant int
-}
-
-func (rs *RootCluster) pushAwaiting(c *StemCluster, index, lastDescendant int) {
-	if lastDescendant <= rs.consumer.lastNotified {
-		c.addWithCrown(index)
-		return
-	}
-
-	rs.consumer.awaitingLock.Lock()
-	defer rs.consumer.awaitingLock.Unlock()
-	rs.consumer.awaitingCompareCrown = append(rs.consumer.awaitingCompareCrown, compareCrown{c, index, lastDescendant})
 }
 
 func NewRootCluster() *RootCluster {
@@ -65,6 +57,8 @@ func NewRootCluster() *RootCluster {
 			stemIndexDone: make(chan struct{}),
 			awaitingLock: sync.Mutex{},
 		},
+
+		m: sync.Mutex{},
 	}
 }
 
@@ -127,34 +121,52 @@ func (rs *RootCluster) Batch() *RootCluster {
 	for i := range rs.matrix {
 		rs.matrix[i] = make([]float32, i)
 	}
-	rs.consumer.consumeNotifications()
 
-	//atomicIndex := new(int32)
-	//*atomicIndex = -1
-	//wg := sync.WaitGroup{}
-	//wg.Add(runtime.NumCPU())
-	//for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-	//	go func() {
-	//		for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(rs.Arena.List); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
-	//			rs.Add(int(*atomicIndex))
-	//		}
-	//		wg.Done()
-	//	}()
-	//}
-	//wg.Wait()
-
-	for i := range rs.Arena.List {
-		rs.Add(i)
+	atomicIndex := new(int32)
+	*atomicIndex = -1
+	wg := sync.WaitGroup{}
+	wg.Add(runtime.NumCPU())
+	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+		go func() {
+			for {
+				valueIndex := int(atomic.AddInt32(atomicIndex, 1))
+				if valueIndex >= len(rs.Arena.List) {
+					break
+				}
+				rs.Add(valueIndex)
+			}
+			wg.Done()
+		}()
 	}
-
-	// notify all done
-	rs.consumer.notifyStemDone(len(rs.Arena.List))
-	close(rs.consumer.stemIndexDone)
-	rs.consumer.wg.Wait()
+	wg.Wait()
+	rs.consumeNotifications()
 	return rs
 }
 
-func (rs *crownConsumer) consumeNotifications() {
+
+func (rs *RootCluster) BatchSync() *RootCluster {
+	Init(rs.Arena)
+	rs.nodeIDToCluster = make([]*StemCluster, len(rs.Arena.List))
+	rs.matrix = make([][]float32, len(rs.Arena.List))
+	for i := range rs.matrix {
+		rs.matrix[i] = make([]float32, i)
+	}
+	for i := range rs.Arena.List {
+		rs.Add(i)
+	}
+	rs.consumeNotifications()
+	return rs
+}
+
+func (rs *RootCluster) consumeNotifications() {
+	for _, sc := range rs.clusters {
+		for _, index  := range sc.stemIndexes {
+			sc.addWithCrown(index)
+		}
+	}
+}
+
+func (rs *crownConsumer) consumeNotificationsAsync() {
 	rs.wg.Add(runtime.NumCPU())
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func(){
@@ -175,16 +187,7 @@ func (rs *crownConsumer) consumeNotifications() {
 	}
 }
 
-func (rs *crownConsumer) notifyStemDone(index int) {
-	rs.lastNotified = index
-	rs.stemIndexDone <- struct{}{}
-}
-
-//func (rs *RootCluster) Rate(index int) float32 { return 0 }
 func (rs *RootCluster) Add(index int) {
-	// notify after element with index is classified by stem
-	defer rs.consumer.notifyStemDone(index)
-
 	// try add into one of existing bags
 	var i int
 	for i = 0; i < len(rs.clusters); i++ {
@@ -298,7 +301,8 @@ func (rs *RootCluster) FindCrown(idx1, idx2 int) float32 {
 			break
 		}
 	}
-	return c1.Get(i, j)
+
+	return c2.Get(i, j)
 }
 
 //func (rs *RootCluster) String() string {

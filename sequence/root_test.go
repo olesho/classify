@@ -120,6 +120,35 @@ func TestRootCluster_Batch2(t *testing.T) {
 	}
 }
 
+
+func TestRootCluster_Batch2SyncAsync(t *testing.T) {
+	a := assert.New(t)
+
+	r1 := NewRootCluster()
+	err := r1.LoadString(testDoc2)
+	a.NoError(err)
+	r1.BatchSync()
+
+	r2 := NewRootCluster()
+	err = r2.LoadString(testDoc2)
+	a.NoError(err)
+	r2.Batch()
+
+	for _, c := range r1.clusters {
+		for _, cc := range c.clusters {
+			fmt.Println(cc.indexes)
+			fmt.Println(cc.rate)
+		}
+	}
+	fmt.Println()
+	for _, c := range r2.clusters {
+		for _, cc := range c.clusters {
+			fmt.Println(cc.indexes)
+			fmt.Println(cc.rate)
+		}
+	}
+}
+
 func TestRootCluster_LoadFile(t *testing.T) {
 	a := assert.New(t)
 	r := NewRootCluster()//.SetLimit(10)

@@ -32,27 +32,34 @@ func (c *StemCluster) addWithCrown(index int) {
 		values = make([]float32, len(c.indexes))
 	}
 
-	//async
-	atomicIndex := new(int32)
-	*atomicIndex = -1
-	wg := sync.WaitGroup{}
-	wg.Add(runtime.NumCPU())
-	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-		go func() {
-			for valueIndex := int(atomic.AddInt32(atomicIndex, 1)); valueIndex < len(values); valueIndex = int(atomic.AddInt32(atomicIndex, 1)) {
-				j := len(c.indexes) - valueIndex - 1
-				values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
 
-	////sync
-	//for valueIndex := range values {
-	//	j := len(c.indexes) - valueIndex - 1
-	//	values[valueIndex] = c.GetStem(j, i) + c.root.Cmp(c.indexes[j], index)
-	//}
+	if len(values) > 2 {
+		//async
+		atomicIndex := new(int32)
+		*atomicIndex = -1
+		wg := sync.WaitGroup{}
+		wg.Add(runtime.NumCPU())
+		for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+			go func() {
+				for {
+					valueIndex := int(atomic.AddInt32(atomicIndex, 1))
+					if valueIndex >= len(values) {
+						break
+					}
+					j := len(c.indexes) - valueIndex - 1
+					values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	} else {
+		// sync
+		for valueIndex := range values {
+			j := len(c.indexes) - valueIndex - 1
+			values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
+		}
+	}
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
@@ -78,7 +85,7 @@ func (c *StemCluster) addWithCrown(index int) {
 	}
 }
 
-func (c *StemCluster) AddFirst(index int) bool {
+func (c *StemCluster) AddFirst(index int)  {
 	c.stemIndexes = []int{index}
 	last := c.root.Arena.Get(index).Ext.(*Additional).LastDescendant
 	if index == last {
@@ -90,33 +97,30 @@ func (c *StemCluster) AddFirst(index int) bool {
 			rate:    1,
 			stem:    c,
 		})
-	} else {
-		//c.endings = []ending{
-		//	{
-		//		index: index,
-		//		last:  c.root.Arena.Get(index).Ext.(*Additional).LastDescendant,
-		//	},
-		//}
-		c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
-
-		//c.lastEnding = index
-		//c.lastEndingDescendant = c.root.Arena.Get(index).Ext.(*Additional).LastDescendant
 	}
-	return true
 }
 
 func (c *StemCluster) Add(index int) bool {
+
+
+
 	// if element with index fits stem cluster
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		for _, existingIdx := range c.stemIndexes {
 			// calculate element fits to each existing element of cluster
 			if val := c.elementComparator.Cmp(index, existingIdx); val > 0 {
-				c.root.matrix[index][existingIdx] = val
+				if existingIdx < index {
+					c.root.matrix[index][existingIdx] = val
+				} else {
+					c.root.matrix[existingIdx][index] = val
+				}
 			}
 		}
 		// append to cluster
+		c.m.Lock()
 		c.stemIndexes = append(c.stemIndexes, index)
-		c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
+		defer c.m.Unlock()
+		//c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
 		return true
 	}
 	return false
