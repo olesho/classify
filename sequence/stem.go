@@ -101,9 +101,8 @@ func (c *StemCluster) AddFirst(index int)  {
 }
 
 func (c *StemCluster) Add(index int) bool {
-
-
-
+	c.m.Lock()
+	defer c.m.Unlock()
 	// if element with index fits stem cluster
 	if c.strictComparator.Cmp(c.stemIndexes[0], index) > 0 {
 		for _, existingIdx := range c.stemIndexes {
@@ -117,9 +116,7 @@ func (c *StemCluster) Add(index int) bool {
 			}
 		}
 		// append to cluster
-		c.m.Lock()
 		c.stemIndexes = append(c.stemIndexes, index)
-		defer c.m.Unlock()
 		//c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
 		return true
 	}
