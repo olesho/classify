@@ -100,35 +100,10 @@ func (c *StemCluster) AddFirst(index int)  {
 	}
 }
 
-//func (c *StemCluster) Add(index int) bool {
-//	firstIndex := c.stemIndexes[0]
-//	val := c.strictComparator.Cmp(firstIndex, index)
-//	if val <= 0 {
-//		return false
-//	}
-//	if firstIndex < index {
-//		c.root.matrix[index][firstIndex] = val
-//	} else {
-//		c.root.matrix[firstIndex][index] = val
-//	}
-//	for _, existingIdx := range c.stemIndexes[1:] {
-//		val := c.elementComparator.Cmp(index, existingIdx)
-//		if val > 0 {
-//			if existingIdx < index {
-//				c.root.matrix[index][existingIdx] = val
-//			} else {
-//				c.root.matrix[existingIdx][index] = val
-//			}
-//		} else { return false}
-//	}
-//	c.m.Lock()
-//	defer c.m.Unlock()
-//	c.stemIndexes = append(c.stemIndexes, index)
-//	return true
-//}
-
 func (c *StemCluster) Add(index int) bool {
+	c.root.m.Lock()
 	firstIdx := c.stemIndexes[0]
+	c.root.m.Unlock()
 	fitting := c.strictComparator.Cmp(firstIdx, index)
 	// if element with index fits stem cluster
 	if fitting > 0 {
@@ -147,7 +122,6 @@ func (c *StemCluster) Add(index int) bool {
 		c.m.Lock()
 		defer c.m.Unlock()
 		c.stemIndexes = append(c.stemIndexes, index)
-		//c.root.pushAwaiting(c, index, c.root.Arena.Get(index).Ext.(*Additional).LastDescendant)
 		return true
 	}
 	return false
