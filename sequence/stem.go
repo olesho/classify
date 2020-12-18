@@ -101,9 +101,6 @@ func (c *StemCluster) AddFirst(index int)  {
 }
 
 func (c *StemCluster) Add(index int) bool {
-	c.m.Lock()
-	defer c.m.Unlock()
-	
 	firstIndex := c.stemIndexes[0]
 	val := c.strictComparator.Cmp(firstIndex, index)
 	if val <= 0 {
@@ -124,6 +121,8 @@ func (c *StemCluster) Add(index int) bool {
 			}
 		} else { return false}
 	}
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.stemIndexes = append(c.stemIndexes, index)
 	return true
 }
