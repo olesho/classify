@@ -15,22 +15,22 @@ import (
 )
 
 type crownConsumer struct {
-	wg sync.WaitGroup
-	stemIndexDone chan struct{}
-	awaitingLock sync.Mutex
+	wg                   sync.WaitGroup
+	stemIndexDone        chan struct{}
+	awaitingLock         sync.Mutex
 	awaitingCompareCrown []compareCrown
-	lastNotified int
+	lastNotified         int
 }
 
 type RootCluster struct {
 	limit int
 
-	clusters []*StemCluster
+	clusters        []*StemCluster
 	nodeIDToCluster []*StemCluster
-	matrix [][]float32
+	matrix          [][]float32
 
-	Arena *arena.Arena
-	strictComparator comparator.Comparator
+	Arena             *arena.Arena
+	strictComparator  comparator.Comparator
 	elementComparator comparator.Comparator
 
 	consumer *crownConsumer
@@ -39,23 +39,23 @@ type RootCluster struct {
 }
 
 type compareCrown struct {
-	stemCluster *StemCluster
-	index int
+	stemCluster    *StemCluster
+	index          int
 	lastDescendant int
 }
 
 func NewRootCluster() *RootCluster {
 	a := arena.NewArena()
 	return &RootCluster{
-		limit: 99999,
-		Arena: a,
-		strictComparator: comparator.NewStrictComparator(a),
+		limit:             99999,
+		Arena:             a,
+		strictComparator:  comparator.NewStrictComparator(a),
 		elementComparator: comparator.NewElementComparator(a),
 
 		consumer: &crownConsumer{
-			wg: sync.WaitGroup{},
+			wg:            sync.WaitGroup{},
 			stemIndexDone: make(chan struct{}),
-			awaitingLock: sync.Mutex{},
+			awaitingLock:  sync.Mutex{},
 		},
 
 		m: sync.Mutex{},
@@ -71,8 +71,8 @@ func (rs *RootCluster) newStemCluster(index int) *StemCluster {
 	sc := &StemCluster{
 		strictComparator:  rs.strictComparator,
 		elementComparator: rs.elementComparator,
-		root: rs,
-		m: sync.Mutex{},
+		root:              rs,
+		m:                 sync.Mutex{},
 	}
 	sc.AddFirst(index)
 	return sc
@@ -144,7 +144,6 @@ func (rs *RootCluster) Batch() *RootCluster {
 	return rs
 }
 
-
 func (rs *RootCluster) BatchSync() *RootCluster {
 	Init(rs.Arena)
 	rs.nodeIDToCluster = make([]*StemCluster, len(rs.Arena.List))
@@ -161,7 +160,7 @@ func (rs *RootCluster) BatchSync() *RootCluster {
 
 func (rs *RootCluster) consumeNotifications() {
 	for _, sc := range rs.clusters {
-		for _, index  := range sc.stemIndexes {
+		for _, index := range sc.stemIndexes {
 			sc.addWithCrown(index)
 		}
 	}
@@ -198,7 +197,7 @@ func (rs *RootCluster) Results() []*Series {
 			crownClusters = append(crownClusters, crownCluster)
 		}
 	}
-	sort.Slice(crownClusters, func(i,j int) bool {
+	sort.Slice(crownClusters, func(i, j int) bool {
 		return len(crownClusters[i].indexes) > len(crownClusters[j].indexes)
 	})
 
@@ -257,10 +256,10 @@ func equalFields(f1, f2 []string) bool {
 }
 
 func removeEqualFields(s *Series) *Series {
-	for fieldIndex := 0; fieldIndex <  len(s.TransposedFields); fieldIndex++ {
-		for offset := fieldIndex + 1; offset < len(s.TransposedFields); offset++ {
-			if equalFields(s.TransposedFields[fieldIndex], s.TransposedFields[offset]) {
-				s.TransposedFields = append(s.TransposedFields[:offset], s.TransposedFields[offset+1:]...)
+	for fieldIndex := 0; fieldIndex < len(s.TransposedValues); fieldIndex++ {
+		for offset := fieldIndex + 1; offset < len(s.TransposedValues); offset++ {
+			if equalFields(s.TransposedValues[fieldIndex], s.TransposedValues[offset]) {
+				s.TransposedValues = append(s.TransposedValues[:offset], s.TransposedValues[offset+1:]...)
 				s.TransposedNodes = append(s.TransposedNodes[:offset], s.TransposedNodes[offset+1:]...)
 				offset--
 			}
@@ -271,7 +270,7 @@ func removeEqualFields(s *Series) *Series {
 
 func rateSeries(s *Series) float32 {
 	var sum float32
-	for _, fields := range s.TransposedFields {
+	for _, fields := range s.TransposedValues {
 		for range fields {
 			sum += 1
 		}

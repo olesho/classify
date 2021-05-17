@@ -5,7 +5,6 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/nathan-fiscaletti/consolesize-go"
 	"testing"
-
 )
 
 func TestTest(t *testing.T) {

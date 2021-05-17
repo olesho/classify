@@ -9,8 +9,8 @@ import (
 
 type CrownCluster struct {
 	indexes []int
-	stem *StemCluster
-	rate float32
+	stem    *StemCluster
+	rate    float32
 }
 
 func (c *CrownCluster) Has(index int) bool {
@@ -28,7 +28,6 @@ func (c *CrownCluster) resolveIndexes() {
 	}
 }
 
-
 func (c *CrownCluster) String() string {
 	r := make([]string, len(c.indexes))
 	for i, index := range c.indexes {
@@ -42,7 +41,7 @@ func (c *CrownCluster) Volume() float32 {
 }
 
 func (c *CrownCluster) Add(rate float32, localIndex int) bool {
-	volume, nextVolume := float32(len(c.indexes)) * c.rate, rate * float32(len(c.indexes)+1)
+	volume, nextVolume := float32(len(c.indexes))*c.rate, rate*float32(len(c.indexes)+1)
 	if volume < nextVolume {
 		c.rate = rate
 		c.indexes = append(c.indexes, localIndex)
@@ -77,7 +76,6 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 	return lowestVal
 }
 
-
 func (c *CrownCluster) toTable() Table {
 	templateArena := c.MergeAll(c.indexes)
 	result := Table{
@@ -87,7 +85,7 @@ func (c *CrownCluster) toTable() Table {
 		Rate:          c.rate,
 	}
 
-	result.Fields = result.WholesomeGroupFields()
+	result.FieldSets = result.WholesomeGroupFields()
 	for i, memberIdx := range c.indexes {
 		result.Members[i] = c.stem.root.Arena.Get(memberIdx)
 	}
@@ -171,7 +169,7 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 				var sum float32
 				cnt := 0
 				for _, id := range templateChildNodeGroupIDs {
-					if val := c.stem.root.FindCrown(idx1, id); val > 0  {
+					if val := c.stem.root.FindCrown(idx1, id); val > 0 {
 						sum += val
 						cnt++
 					}
@@ -224,7 +222,7 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 }
 
 type mergeItem struct {
-	Similarity    float32
-	Index1        int
-	Index2        int
+	Similarity float32
+	Index1     int
+	Index2     int
 }

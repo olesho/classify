@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func FuncExit (command string) {
+func FuncExit(command string) {
 	f, err := os.Create("history.log")
 	if err != nil {
 		log.Println(err)

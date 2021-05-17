@@ -6,19 +6,19 @@ import (
 )
 
 type BlockWriter struct {
-	Width int
-	Indent int
+	Width      int
+	Indent     int
 	TextBorder int
 
-	w prompt.ConsoleWriter
+	w     prompt.ConsoleWriter
 	stack []prompt.Color
 }
 
 func NewBlockWriter(width, indent, textBorder int) *BlockWriter {
 	bw := &BlockWriter{
-		w: prompt.NewStdoutWriter(),
-		Width: width,
-		Indent: indent,
+		w:          prompt.NewStdoutWriter(),
+		Width:      width,
+		Indent:     indent,
 		TextBorder: textBorder,
 	}
 	bw.w.WriteStr("\n")
@@ -61,12 +61,12 @@ func (bw *BlockWriter) EmptyTitleLn(bgColor, textColor prompt.Color, size int, t
 	ind += title
 
 	ln := ""
-	for i := 0; i < size - len(ind); i++ {
+	for i := 0; i < size-len(ind); i++ {
 		ln += " "
 	}
 	ln += "\n"
 
-	bw.w.SetColor(textColor, bgColor,true)
+	bw.w.SetColor(textColor, bgColor, true)
 	bw.w.WriteStr(ind)
 
 	bw.w.Flush()
@@ -94,10 +94,9 @@ func (bw *BlockWriter) renderLeftBorder() {
 
 func (bw *BlockWriter) WriteText(fg, bg prompt.Color, bold bool, text string) {
 	for _, s := range strings.Split(text, "\n") {
-		bw.WriteLine(fg, bg, bold, s + "\n")
+		bw.WriteLine(fg, bg, bold, s+"\n")
 	}
 }
-
 
 func (bw *BlockWriter) WriteLine(fg, bg prompt.Color, bold bool, line string) {
 	bw.renderLeftBorder()

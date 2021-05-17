@@ -8,18 +8,18 @@ import (
 )
 
 type ending struct {
-	last int
+	last  int
 	index int
 }
 
 type StemCluster struct {
-	indexes []int
-	values [][]float32
-	stemIndexes []int
-	clusters []*CrownCluster
-	strictComparator comparator.Comparator
+	indexes           []int
+	values            [][]float32
+	stemIndexes       []int
+	clusters          []*CrownCluster
+	strictComparator  comparator.Comparator
 	elementComparator comparator.Comparator
-	root *RootCluster
+	root              *RootCluster
 
 	m sync.Mutex
 }
@@ -31,7 +31,6 @@ func (c *StemCluster) addWithCrown(index int) {
 	} else {
 		values = make([]float32, len(c.indexes))
 	}
-
 
 	if len(values) > 2 {
 		//async
@@ -63,7 +62,7 @@ func (c *StemCluster) addWithCrown(index int) {
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
-	localIndex := len(c.indexes)-1
+	localIndex := len(c.indexes) - 1
 
 	var maxN int = -1
 	var maxVal float32
@@ -85,7 +84,7 @@ func (c *StemCluster) addWithCrown(index int) {
 	}
 }
 
-func (c *StemCluster) AddFirst(index int)  {
+func (c *StemCluster) AddFirst(index int) {
 	c.stemIndexes = []int{index}
 	last := c.root.Arena.Get(index).Ext.(*Additional).LastDescendant
 	if index == last {

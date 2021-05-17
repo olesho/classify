@@ -3,13 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os/exec"
 	"regexp"
 	"strings"
-	"fmt"
 
 	"golang.org/x/net/html/charset"
 

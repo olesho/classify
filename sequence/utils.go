@@ -3,8 +3,8 @@ package sequence
 import "github.com/olesho/classify/arena"
 
 type Additional struct {
-	Volume   float32
-	GroupIds []int
+	Volume         float32
+	GroupIds       []int
 	LastDescendant int
 }
 

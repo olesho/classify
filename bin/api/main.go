@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"github.com/olesho/classify/sequence"
 	"net/http"
@@ -100,36 +98,17 @@ func xpathOutput(s *sequence.Series, w http.ResponseWriter) {
 
 func jsonOutput(s *sequence.Series, w http.ResponseWriter) error {
 	w.Header().Set("content-type", "application/json")
-	err := json.NewEncoder(w).Encode(jsonResp{
-		Fields: s.TransposedFields,
-		Stats: stats{
-			GroupsCount:      len(s.TransposedFields),
-			GroupFieldsCount: len(s.TransposedFields[0]),
-		},
-	})
-	return err
+	return s.ToJSON(w)
 }
 
 func csvOutput(s *sequence.Series, w http.ResponseWriter) error {
 	w.Header().Set("content-type", "text/csv")
-	cw := csv.NewWriter(w)
-	for _, fields := range s.TransposedFields {
-		if err := cw.Write(fields); err != nil {
-			return err
-		}
-	}
-	cw.Flush()
-	return nil
+	return s.ToCSV(w)
 }
 
 func textOutput(s *sequence.Series, w http.ResponseWriter) {
 	w.Header().Set("content-type", "text/plain")
-	for _, fields := range s.TransposedFields {
-		for _, field := range fields {
-			w.Write([]byte(fmt.Sprintln(field)))
-		}
-		w.Write([]byte("--------------------------\n"))
-	}
+	s.ToText(w)
 }
 
 type stats struct {
@@ -138,6 +117,6 @@ type stats struct {
 }
 
 type jsonResp struct {
-	Fields [][]string `json:"fields"`
-	Stats  stats      `json:"stats"`
+	Fields [][]sequence.Field `json:"fields"`
+	Stats  stats              `json:"stats"`
 }

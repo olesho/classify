@@ -2,6 +2,7 @@
 package arena
 
 import (
+	"fmt"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -127,11 +128,11 @@ func (n Node) String() string {
 }
 
 func (n Node) printAttr() string {
-	res := ""
+	var attr []string
 	for _, a := range n.Attr {
-		res += a.Key + "='" + a.Val + "', "
+		attr = append(attr, fmt.Sprintf("%s='%s'", a.Key, a.Val))
 	}
-	return res
+	return strings.Join(attr, ", ")
 }
 
 func (n Node) GetAttr(key string) string {

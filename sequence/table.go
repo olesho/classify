@@ -14,32 +14,24 @@ type Table struct {
 	Members       []*arena.Node
 	Rate          float32
 	Volume        float32
-	Fields         []Field
+	FieldSets     []FieldSet
 }
-
-const (
-	NotField = iota
-	TextField
-	LinkField
-	ImageField
-)
 
 type Field struct {
-	Type    int
-	Content []string
-	IDs []int
+	Type int
+	Val  string
 }
 
-func (f Field) String() string {
-	s := ""
-	switch f.Type {
-	case TextField:
-		s += "type:text\n"
-	case LinkField:
-		s += "type:link\n"
-	case ImageField:
-		s += "type:image\n"
-	}
+type FieldSet struct {
+	Type string
+	Node *arena.Node
+
+	Content []string
+	IDs     []int
+}
+
+func (f FieldSet) String() string {
+	s := fmt.Sprintf("type:%v", f.Type)
 	for i, f := range f.Content {
 		s += fmt.Sprintf("%v: %v\n", i, f)
 	}
@@ -53,13 +45,13 @@ type Cell struct {
 
 func (c *Table) TemplateVolume() float32 {
 	var vol float32 = .0
-	for _, row := range c.Fields {
+	for _, row := range c.FieldSets {
 		switch row.Type {
-		case TextField:
+		case "text":
 			vol += textsVolume(row.Content)
-		case LinkField:
+		case "link":
 			vol += linksVolume(row.Content)
-		case ImageField:
+		case "image":
 			vol += imgsVolume(row.Content)
 		}
 	}
@@ -113,14 +105,32 @@ func imgsVolume(strs []string) float32 {
 }
 
 // WholesomeGroupFields checks each template arena node for valid field info; if found checks whole group of fields
-func (c *Table) WholesomeGroupFields() []Field {
-	result := make([]Field, 0)
+func (c *Table) WholesomeGroupFields() []FieldSet {
+	result := make([]FieldSet, 0)
 	for _, n := range c.TemplateArena.List {
-		if _, fieldType := WholesomeInfo(n); fieldType != NotField {
+		if _, ok := WholesomeInfo(n); ok {
 			ids := n.Ext.(*Additional).GroupIds
 			if len(ids) == len(c.Members) {
-				if values := extractFields(c.Arena, ids, fieldType); values != nil {
-					result = append(result, *values)
+				if values := extractFields(c.Arena, ids); values != nil {
+					elementType := ""
+					if n.Type == html.TextNode {
+						elementType = "text"
+					} else if n.Type == html.ElementNode {
+						if n.Data == "a" {
+							elementType = "link"
+						} else if n.Data == "img" {
+							elementType = "image"
+						}
+					}
+
+					fieldSet := FieldSet{
+						Type:    elementType,
+						Content: values,
+						Node:    n,
+						IDs:     ids,
+					}
+
+					result = append(result, fieldSet)
 				}
 			}
 		}
@@ -129,40 +139,39 @@ func (c *Table) WholesomeGroupFields() []Field {
 }
 
 // extractFields extracts all field values for certain type
-func extractFields(arena *arena.Arena, ids []int, fieldType int) *Field {
-	values := &Field{}
-	values.Content = make([]string, len(ids))
-	values.IDs = ids
+func extractFields(arena *arena.Arena, ids []int) []string {
+	content := make([]string, len(ids))
 	for i, id := range ids {
-		values.Content[i], values.Type = WholesomeInfo(arena.Get(id))
-		if values.Type != fieldType {
+		val, ok := WholesomeInfo(arena.Get(id))
+		if !ok {
 			return nil
 		}
+		content[i] = val
 	}
-	if !uniform(values.Content) {
-		return values
+	if !uniform(content) {
+		return content
 	}
 	return nil
 }
 
 // WholesomeInfo extracts field value and type
-func WholesomeInfo(n *arena.Node) (string, int) {
+func WholesomeInfo(n *arena.Node) (string, bool) {
 	if n.Type == html.TextNode {
-		return strings.TrimSpace(n.Data), TextField
+		return strings.TrimSpace(n.Data), true
 	}
 	if n.Type == html.ElementNode && n.Data == "img" {
 		for _, attr := range n.Attr {
 			if attr.Key == "src" {
-				return attr.Val, ImageField
+				return attr.Val, true
 			}
 		}
 	}
 	if n.Type == html.ElementNode && n.Data == "a" {
 		for _, attr := range n.Attr {
 			if attr.Key == "href" {
-				return attr.Val, LinkField
+				return attr.Val, true
 			}
 		}
 	}
-	return "", NotField
+	return "", false
 }

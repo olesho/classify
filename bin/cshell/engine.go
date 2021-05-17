@@ -15,6 +15,7 @@ import (
 
 var engine *sequence.RootCluster
 var matrix []*sequence.Series
+
 //var matrix []*stream.Series
 
 func funcReset(command string) {
@@ -60,8 +61,8 @@ func renderOutput(groupIdx int, render func(itemID int) []string) {
 func renderFields(groupIdx int) {
 	cols, _ := consolesize.GetConsoleSize()
 	bw := NewBlockWriter(cols+1, 1, 1)
-	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].TransposedFields)))
-	for i, fields := range matrix[groupIdx].TransposedFields {
+	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].TransposedValues)))
+	for i, fields := range matrix[groupIdx].TransposedValues {
 		bw.Open(prompt.Brown, prompt.White, fmt.Sprintf("Group %v", i+1))
 		for fieldIndex, field := range fields {
 			bw.Open(prompt.Cyan, prompt.White, fmt.Sprintf("Item %v", fieldIndex+1))
@@ -77,7 +78,7 @@ func renderFields(groupIdx int) {
 func renderPaths(groupIdx int) {
 	cols, _ := consolesize.GetConsoleSize()
 	bw := NewBlockWriter(cols+1, 1, 1)
-	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].TransposedFields)))
+	bw.Open(prompt.Red, prompt.White, fmt.Sprintf("Total groups:%v", len(matrix[groupIdx].TransposedValues)))
 
 	for fieldIndex, xpath := range matrix[groupIdx].XPaths() {
 		bw.Open(prompt.Cyan, prompt.White, fmt.Sprintf("Field %v", fieldIndex+1))
@@ -104,8 +105,8 @@ func funcRun(command string) {
 func funcShow(command string) {
 	if matrix == nil {
 		matrix = engine.Batch().Results()
-		fmt.Printf("succesfully loaded %v groups\n" +
-			"" +
+		fmt.Printf("succesfully loaded %v groups\n"+
+			""+
 			"", len(matrix))
 	}
 	if matrix != nil {

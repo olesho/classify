@@ -168,7 +168,6 @@ func TestRootCluster_BatchMultiple(t *testing.T) {
 	}
 }
 
-
 func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 	a := assert.New(t)
 
@@ -199,7 +198,7 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 
 func TestRootCluster_LoadFile(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster()//.SetLimit(10)
+	r := NewRootCluster() //.SetLimit(10)
 	err := r.LoadFile("./rozetka1.html")
 	a.NoError(err)
 	series := r.Batch().Results()
@@ -218,7 +217,7 @@ func TestRootCluster_LoadFile(t *testing.T) {
 
 func TestRootCluster_Hackernews(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster()//.SetLimit(10)
+	r := NewRootCluster() //.SetLimit(10)
 	//err := r.LoadFile("../bin/samples/ycomb.html")
 	//err := r.LoadFile("../bin/samples/hn.html")
 	err := r.LoadFile("../bin/samples/pravda1.html")
@@ -233,7 +232,7 @@ func TestRootCluster_Hackernews(t *testing.T) {
 
 func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster()//.SetLimit(20)
+	r := NewRootCluster() //.SetLimit(20)
 	err := r.LoadFile("./rozetka1.html")
 	a.NoError(err)
 	err = r.LoadFile("./rozetka2.html")

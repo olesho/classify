@@ -1,22 +1,19 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/json"
-	"fmt"
 	"github.com/olesho/classify/sequence"
 	"os"
 	"strconv"
 )
 
 type stats struct {
-	GroupsCount int `json:"groups_count"`
+	GroupsCount      int `json:"groups_count"`
 	GroupFieldsCount int `json:"group_fields_count"`
 }
 
 type jsonResp struct {
 	Fields [][]string `json:"fields"`
-	Stats stats `json:"stats"`
+	Stats  stats      `json:"stats"`
 }
 
 var reversedOrder bool
@@ -38,70 +35,26 @@ func main() {
 		var i int
 		for i = 0; i < len(os.Args); i++ {
 			if os.Args[i] == "-xpath" {
-				xpathOutput(series[rank])
+				series[rank].ToXPath(os.Stdout)
 				break
 			} else if os.Args[i] == "-json" {
-				jsonOutput(series[rank])
+				series[rank].ToJSON(os.Stdout)
 				break
 			} else if os.Args[i] == "-text" {
-				textOutput(series[rank])
+				series[rank].ToText(os.Stdout)
 				break
 			} else if os.Args[i] == "-csv" {
-				csvOutput(series[rank])
+				series[rank].ToCSV(os.Stdout)
 				break
 			}
 		}
 
 		if i == len(os.Args) {
-			textOutput(series[rank])
-		}
-	}
-}
-
-func xpathOutput(s *sequence.Series) {
-	for _, path := range s.XPaths() {
-		fmt.Println(path)
-	}
-}
-
-func jsonOutput(s *sequence.Series) {
-	err := json.NewEncoder(os.Stdout).Encode(jsonResp{
-		Fields: s.TransposedFields,
-		Stats: stats{
-			GroupsCount: len(s.TransposedFields),
-			GroupFieldsCount: len(s.TransposedFields[0]),
-		},
-	})
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func csvOutput(s *sequence.Series) {
-	w := csv.NewWriter(os.Stdout)
-	for _, fields := range s.TransposedFields {
-		if err := w.Write(fields); err != nil {
-			panic(err)
-		}
-	}
-	w.Flush()
-}
-
-func textOutput(s *sequence.Series) {
-	if reversedOrder {
-		for i := len(s.TransposedFields)-1; i > -1; i-- {
-			fields := s.TransposedFields[i]
-			for _, field := range fields {
-				fmt.Println(field)
+			if reversedOrder {
+				series[rank].ToTextReversed(os.Stdout)
+				return
 			}
-			fmt.Println("--------------------------")
-		}
-	} else {
-		for _, fields := range s.TransposedFields {
-			for _, field := range fields {
-				fmt.Println(field)
-			}
-			fmt.Println("--------------------------")
+			series[rank].ToText(os.Stdout)
 		}
 	}
 }

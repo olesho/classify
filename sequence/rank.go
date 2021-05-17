@@ -8,15 +8,12 @@ import (
 
 type Nodes []*arena.Node
 
-//type Matrix struct {
-//	Matrix []Series
-//}
-
 type Series struct {
-	TransposedFields [][]string
-	TransposedNodes []Nodes
-	Arena  *arena.Arena
-	Group  *ClusterGroup
+	//TransposedFields []FieldSet
+	TransposedValues [][]string
+	TransposedNodes  []Nodes
+	Arena            *arena.Arena
+	Group            *ClusterGroup
 	//Volume float32
 	//WholesomeVolume float32
 	//Size int
@@ -92,19 +89,22 @@ func transpose(group *ClusterGroup) *Series {
 		transposedNodes[i] = row
 	}
 
-	transposedFields := make([][]string, size)
+	//transposedFields := make([][]Field, size)
+	transposedValues := make([][]string, size)
 	for i := 0; i < size; i++ {
 		for _, cluster := range group.Clusters {
-			for _, field := range cluster.Fields {
-				transposedFields[i] = append(transposedFields[i], field.Content[i])
+			for _, field := range cluster.FieldSets {
+				//transposedFields[i] = append(transposedFields[i], Field{field.Type, field.Content[i]})
+				transposedValues[i] = append(transposedValues[i], field.Content[i])
 			}
 		}
 	}
 
 	return &Series{
 		Group: group,
-		TransposedFields: transposedFields,
-		TransposedNodes: transposedNodes,
+		//TransposedFields: transposedFields,
+		TransposedValues: transposedValues,
+		TransposedNodes:  transposedNodes,
 	}
 }
 
@@ -135,7 +135,7 @@ func (s *Series) Patterns() *arena.Template {
 func (s *Series) XPaths() []string {
 	var results = make([]string, 0)
 	for _, cluster := range s.Group.Clusters {
-		for _, field := range cluster.Fields {
+		for _, field := range cluster.FieldSets {
 			chains := make([]arena.Chain, 0)
 			for _, id := range field.IDs {
 				chains = append(chains, cluster.Arena.Chain(id, 0))
@@ -149,4 +149,3 @@ func (s *Series) XPaths() []string {
 	}
 	return results
 }
-
