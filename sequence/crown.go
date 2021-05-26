@@ -1,6 +1,7 @@
 package sequence
 
 import (
+	"fmt"
 	"github.com/olesho/classify/arena"
 	"golang.org/x/net/html"
 	"sort"
@@ -74,6 +75,13 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 		//}
 	}
 	return lowestVal
+}
+
+func (c *CrownCluster) toMatrix() [][]float64 {
+	for _, idx := range c.indexes {
+		fmt.Println(idx)
+	}
+	return nil
 }
 
 func (c *CrownCluster) toTable() Table {

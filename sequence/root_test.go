@@ -150,7 +150,7 @@ func TestRootCluster_Batch2(t *testing.T) {
 	a.NoError(err)
 
 	for _, s := range r.Batch().Results() {
-		fmt.Println(s.TransposedFields)
+		fmt.Println(s.TransposedValues)
 	}
 }
 
@@ -164,7 +164,7 @@ func TestRootCluster_BatchMultiple(t *testing.T) {
 	a.NoError(err)
 
 	for _, s := range r.Batch().Results() {
-		fmt.Println(s.TransposedFields)
+		fmt.Println(s.TransposedValues)
 	}
 }
 
@@ -242,8 +242,43 @@ func TestRootCluster_LoadMultipleFiles(t *testing.T) {
 
 	series := r.Batch().Results()
 	for i, s := range series {
-		if len(s.TransposedFields) == 180 {
+		if len(s.TransposedValues) == 180 {
 			fmt.Println(i)
 		}
 	}
+}
+
+func TestRootCluster_FB(t *testing.T) {
+	a := assert.New(t)
+
+	r := NewRootCluster()
+	err := r.LoadFile("./fb.html")
+	a.NoError(err)
+
+	fmt.Println(r.Arena.Find("div", "data-pagelet", "FeedUnit_{n}"))
+
+	r.Batch().Results()
+
+	for _, c := range r.nodeIDToCluster[2694].clusters {
+		if c.Has(2694) {
+			fmt.Println(c.Volume())
+			fmt.Println(20.41* float64(len(c.indexes)-5))
+			for i := range c.indexes[1:] {
+				//fmt.Printf("%v:%v \n", c.indexes[i], c.indexes[i+1])
+				n, m := r.nodeIDToCluster[2694].FindIdx(c.indexes[i]), r.nodeIDToCluster[2694].FindIdx(c.indexes[i+1])
+				fmt.Printf("%v:%v = %v\n", c.indexes[i], c.indexes[i+1], r.nodeIDToCluster[2694].Get(n, m))
+			}
+		}
+	}
+
+	//for _, s := range series {
+	//	if s.Group.Clusters[0].Members[0].GetAttr("data-pagelet") != "" {
+	//		fmt.Println("got it")
+	//	}
+	//	//if s.Group.Size == 63 {
+	//	//	for _, t := range s.Group.Clusters {
+	//	//		fmt.Println(t.Members)
+	//	//	}
+	//	//}
+	//}
 }

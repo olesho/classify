@@ -140,3 +140,12 @@ func (c *StemCluster) Get(i, j int) float32 {
 	}
 	return 0
 }
+
+func (c *StemCluster) FindIdx(idx int) int {
+	for i, next := range c.indexes {
+		if next == idx {
+			return i
+		}
+	}
+	return -1
+}
