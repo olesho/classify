@@ -3,6 +3,7 @@ package sequence
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -134,7 +135,8 @@ func TestRootCluster_Batch(t *testing.T) {
 	err := r.LoadString(testDoc1)
 	a.NoError(err)
 
-	r.Batch().Results()
+	//r.Batch().Results()
+	r.BatchSync().Results()
 
 	for _, c := range r.clusters {
 		if len(c.indexes) != len(c.stemIndexes) {
@@ -150,7 +152,7 @@ func TestRootCluster_Batch2(t *testing.T) {
 	a.NoError(err)
 
 	for _, s := range r.Batch().Results() {
-		fmt.Println(s.TransposedValues)
+		fmt.Println(s.Group.Size, s.Group.Volume, s.TransposedNodes)
 	}
 }
 
@@ -183,14 +185,14 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 
 	for _, c := range r1.clusters {
 		for _, cc := range c.clusters {
-			fmt.Println(cc.indexes)
+			fmt.Println(cc.items)
 			fmt.Println(cc.rate)
 		}
 	}
 	fmt.Println()
 	for _, c := range r2.clusters {
 		for _, cc := range c.clusters {
-			fmt.Println(cc.indexes)
+			fmt.Println(cc.items)
 			fmt.Println(cc.rate)
 		}
 	}
@@ -257,28 +259,46 @@ func TestRootCluster_FB(t *testing.T) {
 
 	fmt.Println(r.Arena.Find("div", "data-pagelet", "FeedUnit_{n}"))
 
-	r.Batch().Results()
+	series := r.Batch().Results()
 
-	for _, c := range r.nodeIDToCluster[2694].clusters {
-		if c.Has(2694) {
-			fmt.Println(c.Volume())
-			fmt.Println(20.41* float64(len(c.indexes)-5))
-			for i := range c.indexes[1:] {
-				//fmt.Printf("%v:%v \n", c.indexes[i], c.indexes[i+1])
-				n, m := r.nodeIDToCluster[2694].FindIdx(c.indexes[i]), r.nodeIDToCluster[2694].FindIdx(c.indexes[i+1])
-				fmt.Printf("%v:%v = %v\n", c.indexes[i], c.indexes[i+1], r.nodeIDToCluster[2694].Get(n, m))
-			}
+	//for _, c := range r.nodeIDToCluster[2694].clusters {
+	//	if c.HasResolved(2694) {
+	//		fmt.Println(c.items)
+	//		for i := range c.items {
+	//			fmt.Println(r.Arena.Get(c.items[i].ResolvedIndex))
+	//		}
+	//		fmt.Println(c.SqueezeWorst())
+	//	}
+	//}
+
+	for _, s := range series {
+		if s.Group.Clusters[0].Members[0].GetAttr("data-pagelet") != "" {
+			//fmt.Println("got it")
+			fmt.Println(s.TransposedValues)
 		}
+		//if s.Group.Size == 63 {
+		//	for _, t := range s.Group.Clusters {
+		//		fmt.Println(t.Members)
+		//	}
+		//}
+	}
+}
+
+func TestRootCluster_HN(t *testing.T) {
+	a := assert.New(t)
+
+	r := NewRootCluster()
+	err := r.LoadFile("./hn.html")
+	a.NoError(err)
+
+	series := r.BatchSync().Results()
+
+	for i := range series[:7] {
+		series[i].ToJSON(os.Stdout)
 	}
 
-	//for _, s := range series {
-	//	if s.Group.Clusters[0].Members[0].GetAttr("data-pagelet") != "" {
-	//		fmt.Println("got it")
-	//	}
-	//	//if s.Group.Size == 63 {
-	//	//	for _, t := range s.Group.Clusters {
-	//	//		fmt.Println(t.Members)
-	//	//	}
-	//	//}
-	//}
+	//fmt.Println(series[0].Group.Size, series[0].Group.Volume)
+	//fmt.Println(series[1].Group.Size, series[1].Group.Volume)
+	//fmt.Println(series[2].Group.Size, series[2].Group.Volume)
+	//fmt.Println(series[3].Group.Size, series[3].Group.Volume)
 }

@@ -62,26 +62,50 @@ func (c *StemCluster) addWithCrown(index int) {
 
 	c.values = append(c.values, values)
 	c.indexes = append(c.indexes, index)
-	localIndex := len(c.indexes) - 1
 
+	// "local" means index in stems
+	localIndex := len(c.indexes) - 1
+	c.expandAnyCrown(localIndex)
+}
+
+func (c *StemCluster) expandAnyCrown(localIndex int) {
 	var maxN int = -1
-	var maxVal float32
+	var maxLowVal float32
+	//var maxAvgVal Frac32
 	// find max match to existing bags
 	for n, cluster := range c.clusters {
-		if val := cluster.Rate(localIndex); val > maxVal {
+		if low, _ := cluster.Rate(localIndex); low > maxLowVal {
 			maxN = n
-			maxVal = val
+			maxLowVal = low
+			//maxAvgVal = avg
 		}
 	}
 
 	// not successful putting into any existing bag
-	if maxN == -1 || !c.clusters[maxN].Add(maxVal, localIndex) {
-		c.clusters = append(c.clusters, &CrownCluster{
-			indexes: []int{localIndex},
-			rate:    1,
-			stem:    c,
-		})
+	if maxN == -1  {
+		c.addNewCrown(localIndex)
+	} else {
+		expanded := c.clusters[maxN].ExpandBest(maxLowVal, localIndex)
+		if expanded {
+			squeezedLocalIdx := c.clusters[maxN].SqueezeWorst()
+			if squeezedLocalIdx > -1 {
+				c.expandAnyCrown(squeezedLocalIdx)
+			}
+		} else {
+			c.addNewCrown(localIndex)
+		}
 	}
+}
+
+func (c *StemCluster) addNewCrown(localIndex int) {
+	c.clusters = append(c.clusters, &CrownCluster{
+		items: []CrownItem{{
+			Index: localIndex,
+			ValueSum: 0,
+		}},
+		rate:    0,
+		stem:    c,
+	})
 }
 
 func (c *StemCluster) AddFirst(index int) {
@@ -91,15 +115,11 @@ func (c *StemCluster) AddFirst(index int) {
 		//same as c.addWithCrown(0, index)
 		c.indexes = []int{index}
 		c.values = append(c.values, []float32{})
-		c.clusters = append(c.clusters, &CrownCluster{
-			indexes: []int{0},
-			rate:    1,
-			stem:    c,
-		})
+		c.addNewCrown(0)
 	}
 }
 
-func (c *StemCluster) Add(index int) bool {
+func (c *StemCluster) AddAndFillMatrix(index int) bool {
 	firstIdx := c.stemIndexes[0]
 	fitting := c.strictComparator.Cmp(firstIdx, index)
 	// if element with index fits stem cluster
@@ -118,6 +138,29 @@ func (c *StemCluster) Add(index int) bool {
 		// append to cluster
 		c.m.Lock()
 		defer c.m.Unlock()
+		c.stemIndexes = append(c.stemIndexes, index)
+		return true
+	}
+	return false
+}
+
+func (c *StemCluster) AddAndFillMatrixSync(index int) bool {
+	firstIdx := c.stemIndexes[0]
+	fitting := c.strictComparator.Cmp(firstIdx, index)
+	// if element with index fits stem cluster
+	if fitting > 0 {
+		for _, existingIdx := range c.stemIndexes {
+			// calculate element fits to each existing element of cluster
+			val := c.elementComparator.Cmp(index, existingIdx)
+			if val > 0 {
+				if existingIdx < index {
+					c.root.matrix[index][existingIdx] = val
+				} else {
+					c.root.matrix[existingIdx][index] = val
+				}
+			}
+		}
+		// append to cluster
 		c.stemIndexes = append(c.stemIndexes, index)
 		return true
 	}
