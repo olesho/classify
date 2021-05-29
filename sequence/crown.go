@@ -127,42 +127,9 @@ func (c *CrownCluster) SqueezeWorst() (squeezedIndex int) {
 			c.rate = newLow
 			return minIdx
 		}
-
-		//var newLow float32
-		//for i := range c.avgRates {
-		//	if i != minIdx {
-		//		squeezedVal := c.stem.Get(c.indexes[minIdx], c.indexes[i])
-		//		newRate := (c.avgRates[i].Num - squeezedVal) / (c.avgRates[i].Den - 1)
-		//		if newLow == 0 || newRate < newLow {
-		//			newLow = newRate
-		//		}
-		//	}
-		//}
-
-		//newVolume := newLow * float32(len(c.indexes)-1)
-		//if newVolume > c.Volume() {
-		//	oldIdx := c.indexes[minIdx]
-		//
-		//	c.avgRates = append(c.avgRates[:minIdx], c.avgRates[minIdx+1:]...)
-		//	c.indexes = append(c.indexes[:minIdx], c.indexes[minIdx+1:]...)
-		//
-		//	for i := range c.avgRates {
-		//		squeezedVal := c.stem.Get(oldIdx, c.indexes[i])
-		//		c.avgRates[i].Num -= squeezedVal
-		//		c.avgRates[i].Den --
-		//	}
-		//
-		//	c.rate = newLow
-		//	return minIdx
-		//}
 	}
 	return
 }
-
-//type Frac32 struct {
-//	Num float32
-//	Den float32
-//}
 
 func (c *CrownCluster) Rate(stemIndex int) (low float32, sum float32) {
 	var start int
