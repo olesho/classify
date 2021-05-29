@@ -147,13 +147,41 @@ func TestRootCluster_Batch(t *testing.T) {
 
 func TestRootCluster_Batch2(t *testing.T) {
 	a := assert.New(t)
-	r := NewRootCluster()
-	err := r.LoadString(testDoc2)
-	a.NoError(err)
 
-	for _, s := range r.Batch().Results() {
-		fmt.Println(s.Group.Size, s.Group.Volume, s.TransposedNodes)
+
+	for n:=0; n < 1000000; n++ {
+		fmt.Println("N", n)
+
+		r := NewRootCluster()
+		err := r.LoadString(testDoc2)
+		a.NoError(err)
+
+		series := r.Batch().Results()
+
+		if len(series) == 3 {
+			//fmt.Println(series[0].Group.Clusters)
+			//
+			//for _, table := range series[0].Group.Clusters {
+			//	fmt.Println("===========")
+			//	for _, fs := range table.FieldSets {
+			//		fmt.Println(fs.IDs)
+			//	}
+			//}
+			//break
+		}
+		if len(series) == 4 {
+			for _, table := range series[0].Group.Clusters {
+				fmt.Println("===========")
+				for _, fs := range table.FieldSets {
+					fmt.Println(fs.IDs)
+				}
+			}
+			break
+		}
+
 	}
+
+
 }
 
 func TestRootCluster_BatchMultiple(t *testing.T) {

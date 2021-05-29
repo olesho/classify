@@ -74,8 +74,9 @@ func (rs *RootCluster) newStemCluster(index int) *StemCluster {
 		elementComparator: rs.elementComparator,
 		root:              rs,
 		m:                 sync.Mutex{},
+		stemIndexes:       []int{index},
 	}
-	sc.AddFirst(index)
+	//sc.AddFirst(index)
 	return sc
 }
 
@@ -141,6 +142,10 @@ func (rs *RootCluster) Batch() *RootCluster {
 	}
 	wg.Wait()
 
+	if rs.matrix[29][22] == 0 {
+		fmt.Println(rs.matrix[29][22])
+	}
+
 	// merge some stem cluster as previous async operation might have produced clusters of same kind
 	for i, firstCluster := range rs.clusters[:len(rs.clusters)-1] {
 		if firstCluster != nil {
@@ -174,11 +179,12 @@ func (rs *RootCluster) Batch() *RootCluster {
 		return rs.clusters[i].stemIndexes[0] < rs.clusters[j].stemIndexes[0]
 	})
 
-	for _, cluster := range rs.clusters {
-		fmt.Println(cluster.indexes)
-	}
-
 	rs.consumeNotifications()
+
+	//if len(rs.clusters[9].clusters) == 2 {
+	//	fmt.Println()
+	//}
+
 	return rs
 }
 
@@ -199,8 +205,14 @@ func (rs *RootCluster) BatchSync() *RootCluster {
 func (rs *RootCluster) consumeNotifications() {
 	for _, sc := range rs.clusters {
 		for _, index := range sc.stemIndexes {
+			//fmt.Println(i, j)
 			sc.addWithCrown(index)
 		}
+		//if i == 9 {
+		//	if len(sc.clusters) == 2 {
+		//		fmt.Println()
+		//	}
+		//}
 	}
 }
 
@@ -235,36 +247,34 @@ func (rs *RootCluster) Results() []*Series {
 			crownClusters = append(crownClusters, crownCluster)
 		}
 	}
+
 	sort.Slice(crownClusters, func(i, j int) bool {
 		return len(crownClusters[i].items) > len(crownClusters[j].items)
 	})
 
 	tables := make([]Table, len(crownClusters))
 
-	//atomicIndex := new(int32)
-	//*atomicIndex = -1
-	//wg := sync.WaitGroup{}
-	//wg.Add(runtime.NumCPU())
-	//for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
-	//	go func() {
-	//		for {
-	//			valueIndex := int(atomic.AddInt32(atomicIndex, 1))
-	//			if valueIndex >= len(crownClusters) {
-	//				break
-	//			}
-	//			tables[valueIndex] = crownClusters[valueIndex].toTable()
-	//		}
-	//		wg.Done()
-	//	}()
-	//}
-	//wg.Wait()
-
-	for i, cluster := range crownClusters {
-		if cluster.HasResolved(2427) {
-			fmt.Println()
-		}
-		tables[i] = cluster.toTable()
+	atomicIndex := new(int32)
+	*atomicIndex = -1
+	wg := sync.WaitGroup{}
+	wg.Add(runtime.NumCPU())
+	for cpuIdx := 0; cpuIdx < runtime.NumCPU(); cpuIdx++ {
+		go func() {
+			for {
+				valueIndex := int(atomic.AddInt32(atomicIndex, 1))
+				if valueIndex >= len(crownClusters) {
+					break
+				}
+				tables[valueIndex] = crownClusters[valueIndex].toTable()
+			}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+
+	//for i, cluster := range crownClusters {
+	//	tables[i] = cluster.toTable()
+	//}
 
 	clusterGroups := groupClusters(rs.Arena, tables)
 

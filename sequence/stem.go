@@ -7,11 +7,6 @@ import (
 	"sync/atomic"
 )
 
-type ending struct {
-	last  int
-	index int
-}
-
 type StemCluster struct {
 	indexes           []int
 	values            [][]float32
@@ -108,23 +103,20 @@ func (c *StemCluster) addNewCrown(localIndex int) {
 	})
 }
 
-func (c *StemCluster) AddFirst(index int) {
-	c.stemIndexes = []int{index}
-	last := c.root.Arena.Get(index).Ext.(*Additional).LastDescendant
-	if index == last {
-		//same as c.addWithCrown(0, index)
-		c.indexes = []int{index}
-		c.values = append(c.values, []float32{})
-		c.addNewCrown(0)
-	}
-}
-
 func (c *StemCluster) AddAndFillMatrix(index int) bool {
 	firstIdx := c.stemIndexes[0]
 	fitting := c.strictComparator.Cmp(firstIdx, index)
 	// if element with index fits stem cluster
+
 	if fitting > 0 {
-		for _, existingIdx := range c.stemIndexes {
+		if firstIdx < index {
+			c.root.matrix[index][firstIdx] = fitting
+		} else {
+			c.root.matrix[firstIdx][index] = fitting
+		}
+
+		c.m.Lock()
+		for _, existingIdx:= range c.stemIndexes {
 			// calculate element fits to each existing element of cluster
 			val := c.elementComparator.Cmp(index, existingIdx)
 			if val > 0 {
@@ -135,10 +127,8 @@ func (c *StemCluster) AddAndFillMatrix(index int) bool {
 				}
 			}
 		}
-		// append to cluster
-		c.m.Lock()
-		defer c.m.Unlock()
 		c.stemIndexes = append(c.stemIndexes, index)
+		c.m.Unlock()
 		return true
 	}
 	return false

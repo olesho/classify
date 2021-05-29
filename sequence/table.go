@@ -31,9 +31,9 @@ type FieldSet struct {
 }
 
 func (f FieldSet) String() string {
-	s := fmt.Sprintf("type:%v", f.Type)
+	s := fmt.Sprintf("type:%v ", f.Type)
 	for i, f := range f.Content {
-		s += fmt.Sprintf("%v: %v\n", i, f)
+		s += fmt.Sprintf("%v:'%v' ", i, f)
 	}
 	return s
 }
