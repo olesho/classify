@@ -134,7 +134,8 @@ func TestRootCluster_Batch(t *testing.T) {
 	err := r.LoadString(testDoc1)
 	a.NoError(err)
 
-	r.Batch().Results()
+	//r.Batch().Results()
+	r.BatchSync().Results()
 
 	for _, c := range r.clusters {
 		if len(c.indexes) != len(c.stemIndexes) {
@@ -143,16 +144,6 @@ func TestRootCluster_Batch(t *testing.T) {
 	}
 }
 
-func TestRootCluster_Batch2(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster()
-	err := r.LoadString(testDoc2)
-	a.NoError(err)
-
-	for _, s := range r.Batch().Results() {
-		fmt.Println(s.TransposedFields)
-	}
-}
 
 func TestRootCluster_BatchMultiple(t *testing.T) {
 	a := assert.New(t)
@@ -164,7 +155,7 @@ func TestRootCluster_BatchMultiple(t *testing.T) {
 	a.NoError(err)
 
 	for _, s := range r.Batch().Results() {
-		fmt.Println(s.TransposedFields)
+		fmt.Println(s.TransposedValues)
 	}
 }
 
@@ -183,67 +174,31 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 
 	for _, c := range r1.clusters {
 		for _, cc := range c.clusters {
-			fmt.Println(cc.indexes)
+			fmt.Println(cc.items)
 			fmt.Println(cc.rate)
 		}
 	}
 	fmt.Println()
 	for _, c := range r2.clusters {
 		for _, cc := range c.clusters {
-			fmt.Println(cc.indexes)
+			fmt.Println(cc.items)
 			fmt.Println(cc.rate)
 		}
 	}
 }
 
 func TestRootCluster_LoadFile(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster() //.SetLimit(10)
-	err := r.LoadFile("./rozetka1.html")
-	a.NoError(err)
-	series := r.Batch().Results()
-	for i, s := range series {
-		if s.Group.Size == 60 {
-			fmt.Println(i)
-		}
-	}
+	// change to file input
+	fileName := ""
 
-	// TODO: get XPath
-	for _, n := range series[0].TransposedNodes {
-		fmt.Println(n)
-	}
-
-}
-
-func TestRootCluster_Hackernews(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster() //.SetLimit(10)
-	//err := r.LoadFile("../bin/samples/ycomb.html")
-	//err := r.LoadFile("../bin/samples/hn.html")
-	err := r.LoadFile("../bin/samples/pravda1.html")
-	a.NoError(err)
-	series := r.Batch().Results()
-	for i, s := range series {
-		if s.Group.Size == 40 {
-			fmt.Println(i)
-		}
-	}
-}
-
-func TestRootCluster_LoadMultipleFiles(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster() //.SetLimit(20)
-	err := r.LoadFile("./rozetka1.html")
-	a.NoError(err)
-	err = r.LoadFile("./rozetka2.html")
-	a.NoError(err)
-	err = r.LoadFile("./rozetka1.html")
-	a.NoError(err)
-
-	series := r.Batch().Results()
-	for i, s := range series {
-		if len(s.TransposedFields) == 180 {
-			fmt.Println(i)
+	if fileName != "" {
+		a := assert.New(t)
+		r := NewRootCluster() //.SetLimit(10)
+		err := r.LoadFile(fileName)
+		a.NoError(err)
+		series := r.Batch().Results()
+		for i, s := range series {
+			fmt.Println(i, s.TransposedValues)
 		}
 	}
 }

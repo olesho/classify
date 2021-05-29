@@ -1,71 +1,153 @@
 package sequence
 
 import (
+	"fmt"
 	"github.com/olesho/classify/arena"
 	"golang.org/x/net/html"
 	"sort"
 	"strings"
 )
 
+type CrownItem struct {
+	Index int
+	ResolvedIndex int
+	ValueSum float32
+}
+
 type CrownCluster struct {
-	indexes []int
+	items []CrownItem
 	stem    *StemCluster
 	rate    float32
 }
 
 func (c *CrownCluster) Has(index int) bool {
-	for _, nextIndex := range c.indexes {
-		if nextIndex == index {
+	for _, item := range c.items {
+		if item.Index == index {
 			return true
 		}
 	}
 	return false
 }
 
+func (c *CrownCluster) HasResolved(index int) bool {
+	for _, item := range c.items {
+		if item.ResolvedIndex == index {
+			return true
+		}
+	}
+	return false
+}
+
+
 func (c *CrownCluster) resolveIndexes() {
-	for i, index := range c.indexes {
-		c.indexes[i] = c.stem.indexes[index]
+	for i := range c.items {
+		//c.indexes[i] = c.stem.indexes[index]
+		c.items[i].ResolvedIndex = c.stem.indexes[c.items[i].Index]
 	}
 }
 
 func (c *CrownCluster) String() string {
-	r := make([]string, len(c.indexes))
-	for i, index := range c.indexes {
-		r[i] = c.stem.root.Arena.StringifyNode(index)
+	r := make([]string, len(c.items))
+	for i := range c.items {
+		r[i] = c.stem.root.Arena.StringifyNode(c.items[i].Index)
 	}
 	return strings.Join(r, " ")
 }
 
 func (c *CrownCluster) Volume() float32 {
-	return float32(len(c.indexes)) * c.rate
+	return float32(len(c.items)) * c.rate
 }
 
-func (c *CrownCluster) Add(rate float32, localIndex int) bool {
-	volume, nextVolume := float32(len(c.indexes))*c.rate, rate*float32(len(c.indexes)+1)
+func (c *CrownCluster) ExpandBest(low float32, localIndex int) bool {
+	volume, nextVolume := float32(len(c.items))*c.rate, low*float32(len(c.items)+1)
 	if volume < nextVolume {
-		c.rate = rate
-		c.indexes = append(c.indexes, localIndex)
+		if c.rate == 0 || low < c.rate {
+			c.rate = low
+		}
+
+		var start int
+		if len(c.items) > c.stem.root.limit {
+			start = len(c.items) - c.stem.root.limit
+		}
+
+		var newItemValuesSum float32
+		for i := start; i < len(c.items); i++ {
+			v := c.stem.Get(localIndex, c.items[i].Index)
+			c.items[i].ValueSum += v
+			newItemValuesSum += v
+		}
+
+		c.items = append(c.items, CrownItem{
+			Index: localIndex,
+			ValueSum: newItemValuesSum,
+		})
+
 		return true
 	}
 	return false
 }
 
-func (c *CrownCluster) Rate(stemIndex int) float32 {
-	var lowestVal float32
-	var i int
-	if len(c.indexes) > c.stem.root.limit {
-		i = len(c.indexes) - c.stem.root.limit
+func (c *CrownCluster) SqueezeWorst() (squeezedIndex int) {
+	squeezedIndex = -1
+	if len(c.items) > 2 {
+		minIdx := 0
+		minAvg := c.items[0].ValueSum / float32(len(c.items))
+		for i := range c.items[1:] {
+			v := c.items[i+1].ValueSum  / float32(len(c.items))
+			if v < minAvg {
+				minIdx = i+1
+				minAvg = v
+			}
+		}
+
+		var newLow float32
+		for i := range c.items {
+			if i != minIdx {
+				for j := i+1; j < len(c.items); j++ {
+					if j != minIdx && i != j {
+						nextRate := c.stem.Get(c.items[i].Index, c.items[j].Index)
+						if newLow == 0 || nextRate < newLow {
+							newLow = nextRate
+						}
+					}
+				}
+			}
+		}
+
+		if newLow * float32(len(c.items)-1) > c.Volume() {
+			oldIdx := c.items[minIdx].Index
+
+			c.items = append(c.items[:minIdx], c.items[minIdx+1:]...)
+
+			for i := range c.items {
+				squeezedVal := c.stem.Get(oldIdx, c.items[i].Index)
+				c.items[i].ValueSum -= squeezedVal
+			}
+
+			c.rate = newLow
+			return minIdx
+		}
+	}
+	return
+}
+
+func (c *CrownCluster) Rate(stemIndex int) (low float32, sum float32) {
+	var start int
+	if len(c.items) > c.stem.root.limit {
+		start = len(c.items) - c.stem.root.limit
 	}
 
-	for ; i < len(c.indexes); i++ {
-		v := c.stem.Get(stemIndex, c.indexes[i])
+	sum = 0
+	for i := start; i < len(c.items); i++ {
+		v := c.stem.Get(stemIndex, c.items[i].Index)
+		sum += v
 		if v > 0 {
-			if lowestVal == 0 {
-				lowestVal = v
+			if low == 0 {
+				low = v
 				continue
 			}
-			if v < lowestVal {
-				lowestVal = v
+			if v < low {
+				low = v
 			}
 		}
 		//} else {
@@ -73,20 +155,29 @@ func (c *CrownCluster) Rate(stemIndex int) float32 {
 		//return 0
 		//}
 	}
-	return lowestVal
+	return low, sum
+}
+
+func (c *CrownCluster) toMatrix() [][]float64 {
+	for _, item := range c.items {
+		fmt.Println(item.Index)
+	}
+	return nil
 }
 
 func (c *CrownCluster) toTable() Table {
-	templateArena := c.MergeAll(c.indexes)
+	resolvedIndexes := make([]int, len(c.items))
+	for i := range c.items { resolvedIndexes[i] = c.items[i].ResolvedIndex }
+	templateArena := c.MergeAll(resolvedIndexes)
 	result := Table{
 		Arena:         c.stem.root.Arena,
 		TemplateArena: templateArena,
-		Members:       make([]*arena.Node, len(c.indexes)),
+		Members:       make([]*arena.Node, len(c.items)),
 		Rate:          c.rate,
 	}
 
 	result.FieldSets = result.WholesomeGroupFields()
-	for i, memberIdx := range c.indexes {
+	for i, memberIdx := range resolvedIndexes {
 		result.Members[i] = c.stem.root.Arena.Get(memberIdx)
 	}
 

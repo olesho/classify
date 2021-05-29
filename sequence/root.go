@@ -2,6 +2,7 @@ package sequence
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/olesho/classify/arena"
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
@@ -73,8 +74,9 @@ func (rs *RootCluster) newStemCluster(index int) *StemCluster {
 		elementComparator: rs.elementComparator,
 		root:              rs,
 		m:                 sync.Mutex{},
+		stemIndexes:       []int{index},
 	}
-	sc.AddFirst(index)
+	//sc.AddFirst(index)
 	return sc
 }
 
@@ -133,12 +135,49 @@ func (rs *RootCluster) Batch() *RootCluster {
 				if valueIndex >= len(rs.Arena.List) {
 					break
 				}
-				rs.Add(valueIndex)
+				rs.Process(valueIndex)
 			}
 			wg.Done()
 		}()
 	}
 	wg.Wait()
+
+	if rs.matrix[29][22] == 0 {
+		fmt.Println(rs.matrix[29][22])
+	}
+
+	// merge some stem cluster as previous async operation might have produced clusters of same kind
+	for i, firstCluster := range rs.clusters[:len(rs.clusters)-1] {
+		if firstCluster != nil {
+			for j := i + 1; j < len(rs.clusters); j++ {
+				secondCluster := rs.clusters[j]
+				if secondCluster == nil {
+					continue
+				}
+				if firstCluster.AddAndFillMatrixSync(secondCluster.stemIndexes[0]) {
+					rs.nodeIDToCluster[secondCluster.stemIndexes[0]] = rs.clusters[i]
+					for _, nextIdx := range secondCluster.stemIndexes[1:] {
+						firstCluster.AddAndFillMatrixSync(nextIdx)
+						rs.nodeIDToCluster[nextIdx] = firstCluster
+					}
+					rs.clusters[j] = nil
+				}
+			}
+		}
+	}
+	// remove nils
+	for i := 0; i < len(rs.clusters); i++ {
+		if rs.clusters[i] == nil {
+			rs.clusters = append(rs.clusters[:i], rs.clusters[i+1:]...)
+			i--
+		} else {
+			sort.Ints(rs.clusters[i].stemIndexes)
+		}
+	}
+
+	sort.Slice(rs.clusters, func(i, j int) bool {
+		return rs.clusters[i].stemIndexes[0] < rs.clusters[j].stemIndexes[0]
+	})
 
 	rs.consumeNotifications()
 	return rs
@@ -152,7 +191,7 @@ func (rs *RootCluster) BatchSync() *RootCluster {
 		rs.matrix[i] = make([]float32, i)
 	}
 	for i := range rs.Arena.List {
-		rs.Add(i)
+		rs.Process(i)
 	}
 	rs.consumeNotifications()
 	return rs
@@ -161,19 +200,25 @@ func (rs *RootCluster) BatchSync() *RootCluster {
 func (rs *RootCluster) consumeNotifications() {
 	for _, sc := range rs.clusters {
 		for _, index := range sc.stemIndexes {
+			//fmt.Println(i, j)
 			sc.addWithCrown(index)
 		}
+		//if i == 9 {
+		//	if len(sc.clusters) == 2 {
+		//		fmt.Println()
+		//	}
+		//}
 	}
 }
 
-func (rs *RootCluster) Add(index int) {
+func (rs *RootCluster) Process(index int) {
 	// try add into one of existing bags
 	var i int
 	for i = 0; i < len(rs.clusters); i++ {
 		rs.m.Lock()
 		next := rs.clusters[i]
 		rs.m.Unlock()
-		if next.Add(index) {
+		if next.AddAndFillMatrix(index) {
 			rs.nodeIDToCluster[index] = next
 			return
 		}
@@ -197,8 +242,9 @@ func (rs *RootCluster) Results() []*Series {
 			crownClusters = append(crownClusters, crownCluster)
 		}
 	}
+
 	sort.Slice(crownClusters, func(i, j int) bool {
-		return len(crownClusters[i].indexes) > len(crownClusters[j].indexes)
+		return len(crownClusters[i].items) > len(crownClusters[j].items)
 	})
 
 	tables := make([]Table, len(crownClusters))
