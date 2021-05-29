@@ -180,11 +180,6 @@ func (rs *RootCluster) Batch() *RootCluster {
 	})
 
 	rs.consumeNotifications()
-
-	//if len(rs.clusters[9].clusters) == 2 {
-	//	fmt.Println()
-	//}
-
 	return rs
 }
 

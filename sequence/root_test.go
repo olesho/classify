@@ -3,7 +3,6 @@ package sequence
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 )
 
@@ -145,44 +144,6 @@ func TestRootCluster_Batch(t *testing.T) {
 	}
 }
 
-func TestRootCluster_Batch2(t *testing.T) {
-	a := assert.New(t)
-
-
-	for n:=0; n < 1000000; n++ {
-		fmt.Println("N", n)
-
-		r := NewRootCluster()
-		err := r.LoadString(testDoc2)
-		a.NoError(err)
-
-		series := r.Batch().Results()
-
-		if len(series) == 3 {
-			//fmt.Println(series[0].Group.Clusters)
-			//
-			//for _, table := range series[0].Group.Clusters {
-			//	fmt.Println("===========")
-			//	for _, fs := range table.FieldSets {
-			//		fmt.Println(fs.IDs)
-			//	}
-			//}
-			//break
-		}
-		if len(series) == 4 {
-			for _, table := range series[0].Group.Clusters {
-				fmt.Println("===========")
-				for _, fs := range table.FieldSets {
-					fmt.Println(fs.IDs)
-				}
-			}
-			break
-		}
-
-	}
-
-
-}
 
 func TestRootCluster_BatchMultiple(t *testing.T) {
 	a := assert.New(t)
@@ -227,106 +188,17 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 }
 
 func TestRootCluster_LoadFile(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster() //.SetLimit(10)
-	err := r.LoadFile("./rozetka1.html")
-	a.NoError(err)
-	series := r.Batch().Results()
-	for i, s := range series {
-		if s.Group.Size == 60 {
-			fmt.Println(i)
+	// change to file input
+	fileName := ""
+
+	if fileName != "" {
+		a := assert.New(t)
+		r := NewRootCluster() //.SetLimit(10)
+		err := r.LoadFile(fileName)
+		a.NoError(err)
+		series := r.Batch().Results()
+		for i, s := range series {
+			fmt.Println(i, s.TransposedValues)
 		}
 	}
-
-	// TODO: get XPath
-	for _, n := range series[0].TransposedNodes {
-		fmt.Println(n)
-	}
-
-}
-
-func TestRootCluster_Hackernews(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster() //.SetLimit(10)
-	//err := r.LoadFile("../bin/samples/ycomb.html")
-	//err := r.LoadFile("../bin/samples/hn.html")
-	err := r.LoadFile("../bin/samples/pravda1.html")
-	a.NoError(err)
-	series := r.Batch().Results()
-	for i, s := range series {
-		if s.Group.Size == 40 {
-			fmt.Println(i)
-		}
-	}
-}
-
-func TestRootCluster_LoadMultipleFiles(t *testing.T) {
-	a := assert.New(t)
-	r := NewRootCluster() //.SetLimit(20)
-	err := r.LoadFile("./rozetka1.html")
-	a.NoError(err)
-	err = r.LoadFile("./rozetka2.html")
-	a.NoError(err)
-	err = r.LoadFile("./rozetka1.html")
-	a.NoError(err)
-
-	series := r.Batch().Results()
-	for i, s := range series {
-		if len(s.TransposedValues) == 180 {
-			fmt.Println(i)
-		}
-	}
-}
-
-func TestRootCluster_FB(t *testing.T) {
-	a := assert.New(t)
-
-	r := NewRootCluster()
-	err := r.LoadFile("./fb.html")
-	a.NoError(err)
-
-	fmt.Println(r.Arena.Find("div", "data-pagelet", "FeedUnit_{n}"))
-
-	series := r.Batch().Results()
-
-	//for _, c := range r.nodeIDToCluster[2694].clusters {
-	//	if c.HasResolved(2694) {
-	//		fmt.Println(c.items)
-	//		for i := range c.items {
-	//			fmt.Println(r.Arena.Get(c.items[i].ResolvedIndex))
-	//		}
-	//		fmt.Println(c.SqueezeWorst())
-	//	}
-	//}
-
-	for _, s := range series {
-		if s.Group.Clusters[0].Members[0].GetAttr("data-pagelet") != "" {
-			//fmt.Println("got it")
-			fmt.Println(s.TransposedValues)
-		}
-		//if s.Group.Size == 63 {
-		//	for _, t := range s.Group.Clusters {
-		//		fmt.Println(t.Members)
-		//	}
-		//}
-	}
-}
-
-func TestRootCluster_HN(t *testing.T) {
-	a := assert.New(t)
-
-	r := NewRootCluster()
-	err := r.LoadFile("./hn.html")
-	a.NoError(err)
-
-	series := r.BatchSync().Results()
-
-	for i := range series[:7] {
-		series[i].ToJSON(os.Stdout)
-	}
-
-	//fmt.Println(series[0].Group.Size, series[0].Group.Volume)
-	//fmt.Println(series[1].Group.Size, series[1].Group.Volume)
-	//fmt.Println(series[2].Group.Size, series[2].Group.Volume)
-	//fmt.Println(series[3].Group.Size, series[3].Group.Volume)
 }
