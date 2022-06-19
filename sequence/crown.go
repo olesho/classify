@@ -48,9 +48,10 @@ func (c *CrownCluster) resolveIndexes() {
 func (c *CrownCluster) String() string {
 	r := make([]string, len(c.items))
 	for i := range c.items {
-		r[i] = c.stem.root.Arena.StringifyNode(c.items[i].Index)
+		r[i] = c.stem.root.Arena.Get(c.stem.indexes[c.items[i].Index]).String()
+		//r[i] = strings.Join(c.stem.root.Arena.StringifyInformation(c.items[i].Index), ",")
 	}
-	return strings.Join(r, " ")
+	return strings.Join(r, " | ")
 }
 
 func (c *CrownCluster) Volume() float32 {
@@ -86,51 +87,50 @@ func (c *CrownCluster) ExpandBest(low float32, localIndex int) bool {
 	return false
 }
 
+// SqueezeWorst finds worst compatible index
 func (c *CrownCluster) SqueezeWorst() (squeezedIndex int) {
 	squeezedIndex = -1
-	if len(c.items) > 2 {
-		minIdx := 0
-		minAvg := c.items[0].ValueSum / float32(len(c.items))
-		for i := range c.items[1:] {
-			v := c.items[i+1].ValueSum  / float32(len(c.items))
-			if v < minAvg {
-				minIdx = i+1
-				minAvg = v
-			}
+	minIdx := 0
+	minAvg := c.items[0].ValueSum / float32(len(c.items))
+	for i := range c.items[1:] {
+		v := c.items[i+1].ValueSum  / float32(len(c.items))
+		if v < minAvg {
+			minIdx = i+1
+			minAvg = v
 		}
+	}
 
-		var newLow float32
-		for i := range c.items {
-			if i != minIdx {
-				for j := i+1; j < len(c.items); j++ {
-					if j != minIdx && i != j {
-						nextRate := c.stem.Get(c.items[i].Index, c.items[j].Index)
-						if newLow == 0 || nextRate < newLow {
-							newLow = nextRate
-						}
+	var newLow float32
+	for i := range c.items {
+		if i != minIdx {
+			for j := i+1; j < len(c.items); j++ {
+				if j != minIdx && i != j {
+					nextRate := c.stem.Get(c.items[i].Index, c.items[j].Index)
+					if newLow == 0 || nextRate < newLow {
+						newLow = nextRate
 					}
 				}
 			}
 		}
+	}
 
-		if newLow * float32(len(c.items)-1) > c.Volume() {
-			oldIdx := c.items[minIdx].Index
+	if newLow * float32(len(c.items)-1) > c.Volume() {
+		oldIdx := c.items[minIdx].Index
 
-			c.items = append(c.items[:minIdx], c.items[minIdx+1:]...)
+		c.items = append(c.items[:minIdx], c.items[minIdx+1:]...)
 
-			for i := range c.items {
-				squeezedVal := c.stem.Get(oldIdx, c.items[i].Index)
-				c.items[i].ValueSum -= squeezedVal
-			}
-
-			c.rate = newLow
-			return minIdx
+		for i := range c.items {
+			squeezedVal := c.stem.Get(oldIdx, c.items[i].Index)
+			c.items[i].ValueSum -= squeezedVal
 		}
+
+		c.rate = newLow
+		return minIdx
 	}
 	return
 }
 
-func (c *CrownCluster) Rate(stemIndex int) (low float32, sum float32) {
+func (c *CrownCluster) RateAgainst(stemIndex int) (low float32, sum float32) {
 	var start int
 	if len(c.items) > c.stem.root.limit {
 		start = len(c.items) - c.stem.root.limit
@@ -247,8 +247,6 @@ func (c *CrownCluster) MergeIntoTemplate(templateArena *arena.Arena, mainIdx, te
 		for i2, idx2 := range templateNode.Children {
 			templateChildNodeGroupIDs := templateArena.Get(idx2).Ext.(*Additional).GroupIds
 			for i1, idx1 := range n1.Children {
-				//idx := (i1+1)*(i2+1) - 1
-
 				var sum float32
 				cnt := 0
 				for _, id := range templateChildNodeGroupIDs {

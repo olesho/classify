@@ -1,6 +1,8 @@
 package sequence
 
-import "sort"
+import (
+	"sort"
+)
 
 func (rs *RootCluster) Cmp(idx1, idx2 int) float32 {
 	n1, n2 := rs.Arena.Get(idx1), rs.Arena.Get(idx2)

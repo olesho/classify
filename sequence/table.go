@@ -132,6 +132,8 @@ func (c *Table) WholesomeGroupFields() []FieldSet {
 
 					result = append(result, fieldSet)
 				}
+			} else {
+				// TODO handle empty fields
 			}
 		}
 	}

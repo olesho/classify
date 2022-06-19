@@ -146,7 +146,6 @@ func TestRootCluster_Batch(t *testing.T) {
 	err := r.LoadString(testDoc1)
 	a.NoError(err)
 
-	//r.Batch().Results()
 	r.BatchSync().Results()
 
 	for _, c := range r.clusters {
@@ -191,7 +190,7 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 			fmt.Println(cc.rate)
 		}
 	}
-	fmt.Println()
+
 	for _, c := range r2.clusters {
 		for _, cc := range c.clusters {
 			fmt.Println(cc.items)
@@ -200,20 +199,118 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 	}
 }
 
-func TestRootCluster_LoadFile(t *testing.T) {
-	// change to file input
-	fileName := ""
-
-	if fileName != "" {
-		a := assert.New(t)
-		r := NewRootCluster() //.SetLimit(10)
-		err := r.LoadFile(fileName)
-		a.NoError(err)
-		series := r.Batch().Results()
-		for i, s := range series {
-			fmt.Println(i, s.TransposedValues)
+func Test_SmallFile(t *testing.T) {
+	fileName := "ips_small.html"
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadFile(fileName)
+	a.NoError(err)
+	series := r.Batch().Results()
+	trFound := r.Arena.FindByName("tr")
+	for _, s := range series {
+		if len(s.TransposedValues) == len(trFound) {
+			return
 		}
 	}
+	t.Error("no success")
+}
+
+func TestRootCluster_LoadTinyFile(t *testing.T) {
+	// change to file input
+	fileName := "ips_tiny.html"
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadFile(fileName)
+	a.NoError(err)
+	series := r.BatchSync().Results()
+	trFound := r.Arena.FindByName("tr")
+	for _, s := range series {
+		if len(s.TransposedValues) == len(trFound) {
+			return
+		}
+	}
+	t.Error("no success")
+}
+
+func TestRootCluster_LoadAvgFile(t *testing.T) {
+	// change to file input
+	fileName := "ips_avg.html"
+	a := assert.New(t)
+	r := NewRootCluster().SetDebug(&DebugConfig{TagName: "tr"})
+	err := r.LoadFile(fileName)
+	a.NoError(err)
+	series := r.Batch().Results()
+	trFound := r.Arena.FindByName("tr")
+	for _, s := range series {
+		if len(s.TransposedValues) == len(trFound) {
+			return
+		}
+	}
+	t.Error("no success")
+}
+
+func TestRootCluster_LoadPravda(t *testing.T) {
+	fileName := "pravda.html"
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadFile(fileName)
+	a.NoError(err)
+	series := r.Batch().Results()
+	for _, s := range series {
+		if len(s.TransposedValues) == 40 {
+			return
+		}
+	}
+	t.Error("no success")
+}
+
+func TestRootCluster_LoadHackernoon(t *testing.T) {
+	fileName := "hackernoon.html"
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadFile(fileName)
+	a.NoError(err)
+	series := r.Batch().Results()
+	for _, s := range series {
+		if len(s.TransposedValues) == 63 {
+			return
+		}
+	}
+	t.Error("no success")
+}
+
+func TestRootCluster_LoadMini(t *testing.T) {
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadString(`
+		<html>
+			<body>
+				<p>
+					<div>txt1</div>
+					<h1>head1<h1>
+					<div>txt2</div>
+				</p>
+				<p>
+					<div>txt2</div>
+					<h1>head2<h1>
+					<div></div>
+				</p>
+				<p>
+					<div></div>
+					<h1>head3<h1>
+					<div>txt3</div>
+				</p>
+			</body>
+		</html>
+`)
+	a.NoError(err)
+	series := r.BatchSync().Results()
+	for _, s := range series {
+		if len(s.TransposedValues) == 3 {
+			return
+		}
+	}
+	t.Error("no success")
 }
 
 //func TestChainsOptimization(t *testing.T) {
