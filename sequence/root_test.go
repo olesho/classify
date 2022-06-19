@@ -200,22 +200,19 @@ func TestRootCluster_Batch2SyncAsync(t *testing.T) {
 }
 
 func Test_SmallFile(t *testing.T) {
-	// change to file input
 	fileName := "ips_small.html"
-	if fileName != "" {
-		a := assert.New(t)
-		r := NewRootCluster()
-		err := r.LoadFile(fileName)
-		a.NoError(err)
-		series := r.Batch().Results()
-		trFound := r.Arena.FindByName("tr")
-		for _, s := range series {
-			if len(s.TransposedValues) == len(trFound) {
-				return
-			}
+	a := assert.New(t)
+	r := NewRootCluster()
+	err := r.LoadFile(fileName)
+	a.NoError(err)
+	series := r.Batch().Results()
+	trFound := r.Arena.FindByName("tr")
+	for _, s := range series {
+		if len(s.TransposedValues) == len(trFound) {
+			return
 		}
-		t.Error("no success")
 	}
+	t.Error("no success")
 }
 
 func TestRootCluster_LoadTinyFile(t *testing.T) {

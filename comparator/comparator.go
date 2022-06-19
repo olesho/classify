@@ -40,10 +40,7 @@ func hasStr(s string, ss []string) bool {
 
 func (s *DefaultComparator) cmpElements(n1, n2 *arena.Node) float32 {
 	if n1.Type == n2.Type && n1.Type == html.TextNode {
-		//return 0.1
-		//return 1
-		//return cmpStrings(n1.Data, n2.Data) * 2.0/float32(len(n1.Data) + len(n2.Data))
-		//return cmpStrings(n1.Data, n2.Data)*10
+		return cmpStrings(n1.Data, n2.Data)*10
 	}
 	if n1.Type == n2.Type {
 		if n1.Data == n2.Data {

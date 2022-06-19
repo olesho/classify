@@ -93,14 +93,12 @@ func (c *StemCluster) addWithCrownSync(index int) {
 func (c *StemCluster) expandAnyCrown(localIndex int) {
 	var bestClusterIndex int = -1
 	var maxLowVal float32
-	//var maxAvgVal Frac32
 	// find max match to existing bags
 	for n, currentCluster := range c.clusters {
 		low, _ := currentCluster.RateAgainst(localIndex)
 		if low > maxLowVal {
 			bestClusterIndex = n
 			maxLowVal = low
-			//maxAvgVal = avg
 		}
 	}
 
@@ -111,14 +109,6 @@ func (c *StemCluster) expandAnyCrown(localIndex int) {
 			if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(c.indexes[localIndex])) && c.root.debug.DebugExpansion {
 				fmt.Printf("expanded with %v\n", c.root.Arena.Get(c.indexes[localIndex]))
 			}
-			// TODO: squeeze problem
-			//if len(c.clusters[bestClusterIndex].items) > 2 {
-			//	squeezedLocalIdx := c.clusters[bestClusterIndex].SqueezeWorst()
-			//	if squeezedLocalIdx > -1 {
-			//		c.expandAnyCrown(squeezedLocalIdx)
-			//		return
-			//	}
-			//}
 			return
 		} else {
 			if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(c.indexes[localIndex])) && c.root.debug.DebugExpansion {
@@ -151,14 +141,6 @@ func (c *StemCluster) AddAndFillMatrix(index int) bool {
 	// if element with index fits stem cluster
 
 	if fitting > 0 {
-
-		// TODO ? why use fitting (strictComparator.Cmp) here if just next we do elementComparator.Cmp
-		//if firstIdx < index {
-		//	c.root.matrix[index][firstIdx] = fitting
-		//} else {
-		//	c.root.matrix[firstIdx][index] = fitting
-		//}
-
 		c.m.Lock()
 		for _, existingIdx:= range c.stemIndexes {
 			// calculate element fits to each existing element of cluster
