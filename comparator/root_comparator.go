@@ -48,6 +48,11 @@ func basicCmp(n1, n2 *arena.Node) bool {
 //}
 
 func (c *StrictComparator) Cmp(idx1, idx2 int) float32 {
+	//if (idx1 == 7 || idx1 == 22 || idx1 == 37 || idx1 == 51 || idx1 == 66 || idx1 == 81 || idx1 == 95) &&
+	//	(idx2 == 7 || idx2 == 22 || idx2 == 37 || idx2 == 51 || idx2 == 66 || idx2 == 81 || idx2 == 95) {
+	//	fmt.Println()
+	//}
+
 	if idx1 == 0 || idx2 == 0 {
 		return 0
 	}

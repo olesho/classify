@@ -2,6 +2,7 @@ package sequence
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/olesho/classify/arena"
 	"github.com/olesho/classify/comparator"
 	"golang.org/x/net/html"
@@ -22,8 +23,19 @@ type crownConsumer struct {
 	lastNotified         int
 }
 
+type DebugConfig struct {
+	DebugMatrix bool
+	DebugExpansion bool
+	DebugClusterization bool
+	DebugGroups bool
+	TagName string
+	AttrKey string
+	AttrVal string
+}
+
 type RootCluster struct {
 	limit int
+	debug *DebugConfig
 
 	clusters        []*StemCluster
 	nodeIDToCluster []*StemCluster
@@ -64,6 +76,28 @@ func NewRootCluster() *RootCluster {
 
 func (rs *RootCluster) SetLimit(limit int) *RootCluster {
 	rs.limit = limit
+	return rs
+}
+
+func (rs *RootCluster) matchDebug(n *arena.Node) bool {
+	if n.Type == html.ElementNode &&
+		n.Data == rs.debug.TagName {
+		if rs.debug.AttrKey != "" {
+			if rs.debug.AttrVal != "" && n.GetAttr(rs.debug.AttrKey) == rs.debug.AttrVal {
+				return true
+			}
+			if n.GetAttr(rs.debug.AttrKey) != "" {
+				return true
+			}
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+func (rs *RootCluster) SetDebug(config *DebugConfig) *RootCluster {
+	rs.debug = config
 	return rs
 }
 
@@ -192,7 +226,7 @@ func (rs *RootCluster) BatchSync() *RootCluster {
 	for i := range rs.Arena.List {
 		rs.Process(i)
 	}
-	rs.consumeNotifications()
+	rs.consumeNotificationsSync()
 	return rs
 }
 
@@ -200,6 +234,24 @@ func (rs *RootCluster) consumeNotifications() {
 	for _, stemCluster := range rs.clusters {
 		for _, index := range stemCluster.stemIndexes {
 			stemCluster.addWithCrown(index)
+		}
+
+		for idx1, idx2, val := stemCluster.findCrownCandidatesToMerge();
+			idx1 > -1 && idx2 > -1;
+		idx1, idx2, val = stemCluster.findCrownCandidatesToMerge() {
+			stemCluster.clusters[idx1].items = append(stemCluster.clusters[idx1].items, stemCluster.clusters[idx2].items...)
+			stemCluster.clusters[idx1].rate = val
+			stemCluster.clusters = append(stemCluster.clusters[:idx2], stemCluster.clusters[idx2+1:]...)
+			for idx := stemCluster.clusters[idx1].SqueezeWorst();
+				idx > -1;
+			idx = stemCluster.clusters[idx1].SqueezeWorst() {}
+		}
+
+		if rs.debug != nil && rs.debug.TagName == rs.Arena.Get(stemCluster.stemIndexes[0]).Data {
+			for _, c := range stemCluster.clusters {
+				element := rs.Arena.Get(stemCluster.indexes[c.items[0].Index])
+				fmt.Printf("clusterized (%v):%v\n", len(c.items), element)
+			}
 		}
 	}
 }
@@ -209,7 +261,55 @@ func (rs *RootCluster) consumeNotificationsSync() {
 		for _, index := range stemCluster.stemIndexes {
 			stemCluster.addWithCrownSync(index)
 		}
+
+		for idx1, idx2, val := stemCluster.findCrownCandidatesToMerge();
+		idx1 > -1 && idx2 > -1;
+		idx1, idx2, val = stemCluster.findCrownCandidatesToMerge() {
+			stemCluster.clusters[idx1].items = append(stemCluster.clusters[idx1].items, stemCluster.clusters[idx2].items...)
+			stemCluster.clusters[idx1].rate = val
+			stemCluster.clusters = append(stemCluster.clusters[:idx2], stemCluster.clusters[idx2+1:]...)
+			for idx := stemCluster.clusters[idx1].SqueezeWorst();
+				idx > -1;
+				idx = stemCluster.clusters[idx1].SqueezeWorst() {}
+		}
+
+		if rs.debug != nil && rs.debug.TagName == rs.Arena.Get(stemCluster.stemIndexes[0]).Data {
+			for _, c := range stemCluster.clusters {
+				element := rs.Arena.Get(stemCluster.indexes[c.items[0].Index])
+				fmt.Printf("clusterized (%v):%v\n", len(c.items), element)
+			}
+		}
 	}
+}
+
+func (c *StemCluster) findCrownCandidatesToMerge() (int, int, float32) {
+	var max float32
+	maxIdx1, maxIdx2 := -1, -1
+	for idx1 := range c.clusters {
+		for idx2 := idx1 + 1; idx2 < len(c.clusters); idx2++ {
+			val := c.evalCrownMerge(idx1, idx2)
+			if val > max {
+				max = val
+				maxIdx1 = idx1
+				maxIdx2 = idx2
+			}
+		}
+	}
+	return maxIdx1, maxIdx2, max
+}
+
+func (c *StemCluster) evalCrownMerge(idx1, idx2 int) float32 {
+	c1 := c.clusters[idx1]
+	c2 := c.clusters[idx2]
+	var lowest float32
+	for _, item1 := range c1.items {
+		low, _ := c2.RateAgainst(item1.Index)
+		if lowest == 0 { lowest = low }
+		if low < lowest {
+			lowest = low
+		}
+	}
+	return lowest
 }
 
 func (rs *RootCluster) Process(index int) {
@@ -273,6 +373,15 @@ func (rs *RootCluster) Results() []*Series {
 	//}
 
 	clusterGroups := groupClusters(rs.Arena, tables)
+	if rs.debug != nil {
+		for _, g := range clusterGroups {
+			for _, cluster := range g.Clusters {
+				if rs.matchDebug(cluster.Members[0]) && rs.debug.DebugGroups {
+					fmt.Printf("groups: %v\n", cluster.Members[0])
+				}
+			}
+		}
+	}
 
 	// transpose
 	rm := make([]*Series, len(clusterGroups))

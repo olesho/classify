@@ -53,18 +53,22 @@ func cmpAttr(n1, n2 *arena.Node) float32 {
 			}
 		}
 	}
+	if total == 0 {
+		return 0
+	}
 	return coincided * 2 / total
 }
 
 func (c *ElementComparator) Cmp(idx1, idx2 int) float32 {
 	n1, n2 := c.a.Get(idx1), c.a.Get(idx2)
 	if n1.Type == n2.Type && n1.Type == html.TextNode {
+		//return 0.1
 		//return 1
-		return cmpStrings(n1.Data, n2.Data)
+		return cmpStrings(n1.Data, n2.Data)*10
 	}
 	if n1.Type == n2.Type {
 		if n1.Data == n2.Data {
-			return cmpAttr(n1, n2) + 1
+			return (cmpAttr(n1, n2) + 1)
 		}
 	}
 

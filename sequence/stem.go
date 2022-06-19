@@ -1,7 +1,9 @@
 package sequence
 
 import (
+	"fmt"
 	"github.com/olesho/classify/comparator"
+	"log"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -75,7 +77,9 @@ func (c *StemCluster) addWithCrownSync(index int) {
 	// sync
 	for valueIndex := range values {
 		j := len(c.indexes) - valueIndex - 1
-		values[valueIndex] = c.root.FindStem(c.indexes[j], index) + c.root.Cmp(c.indexes[j], index)
+		st := c.root.FindStem(c.indexes[j], index)
+		cm := c.root.Cmp(c.indexes[j], index)
+		values[valueIndex] = st + cm
 	}
 
 	c.values = append(c.values, values)
@@ -87,31 +91,44 @@ func (c *StemCluster) addWithCrownSync(index int) {
 }
 
 func (c *StemCluster) expandAnyCrown(localIndex int) {
-	var maxN int = -1
+	var bestClusterIndex int = -1
 	var maxLowVal float32
 	//var maxAvgVal Frac32
 	// find max match to existing bags
-	for n, cluster := range c.clusters {
-		if low, _ := cluster.Rate(localIndex); low > maxLowVal {
-			maxN = n
+	for n, currentCluster := range c.clusters {
+		low, _ := currentCluster.RateAgainst(localIndex)
+		if low > maxLowVal {
+			bestClusterIndex = n
 			maxLowVal = low
 			//maxAvgVal = avg
 		}
 	}
 
 	// not successful putting into any existing bag
-	if maxN == -1  {
-		c.addNewCrown(localIndex)
-	} else {
-		expanded := c.clusters[maxN].ExpandBest(maxLowVal, localIndex)
+	if bestClusterIndex > -1 {
+		expanded := c.clusters[bestClusterIndex].ExpandBest(maxLowVal, localIndex)
 		if expanded {
-			squeezedLocalIdx := c.clusters[maxN].SqueezeWorst()
-			if squeezedLocalIdx > -1 {
-				c.expandAnyCrown(squeezedLocalIdx)
+			if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(c.indexes[localIndex])) && c.root.debug.DebugExpansion {
+				fmt.Printf("expanded with %v\n", c.root.Arena.Get(c.indexes[localIndex]))
 			}
+			// TODO: squeeze problem
+			//if len(c.clusters[bestClusterIndex].items) > 2 {
+			//	squeezedLocalIdx := c.clusters[bestClusterIndex].SqueezeWorst()
+			//	if squeezedLocalIdx > -1 {
+			//		c.expandAnyCrown(squeezedLocalIdx)
+			//		return
+			//	}
+			//}
+			return
 		} else {
-			c.addNewCrown(localIndex)
+			if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(c.indexes[localIndex])) && c.root.debug.DebugExpansion {
+				fmt.Printf("not expanded with %v\n", c.root.Arena.Get(c.indexes[localIndex]))
+			}
 		}
+	}
+	c.addNewCrown(localIndex)
+	if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(c.stemIndexes[localIndex])) {
+		fmt.Printf("new crown cluster for: %v\n", c.root.Arena.Get(c.stemIndexes[localIndex]))
 	}
 }
 
@@ -134,11 +151,13 @@ func (c *StemCluster) AddAndFillMatrix(index int) bool {
 	// if element with index fits stem cluster
 
 	if fitting > 0 {
-		if firstIdx < index {
-			c.root.matrix[index][firstIdx] = fitting
-		} else {
-			c.root.matrix[firstIdx][index] = fitting
-		}
+
+		// TODO ? why use fitting (strictComparator.Cmp) here if just next we do elementComparator.Cmp
+		//if firstIdx < index {
+		//	c.root.matrix[index][firstIdx] = fitting
+		//} else {
+		//	c.root.matrix[firstIdx][index] = fitting
+		//}
 
 		c.m.Lock()
 		for _, existingIdx:= range c.stemIndexes {
@@ -147,8 +166,23 @@ func (c *StemCluster) AddAndFillMatrix(index int) bool {
 			if val > 0 {
 				if existingIdx < index {
 					c.root.matrix[index][existingIdx] = val
+					if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(index)) && c.root.matchDebug(c.root.Arena.Get(existingIdx)) {
+						if c.root.debug.DebugMatrix {
+							log.Printf("matrix filled %v for %v:%v vs %v:%v",
+								val,
+								index, c.root.Arena.Get(index),
+								existingIdx, c.root.Arena.Get(existingIdx))
+						}
+					}
 				} else {
 					c.root.matrix[existingIdx][index] = val
+					if c.root.debug != nil && c.root.matchDebug(c.root.Arena.Get(existingIdx)) && c.root.matchDebug(c.root.Arena.Get(index)) {
+						if c.root.debug.DebugMatrix {
+							log.Printf("matrix filled for %v:%v vs %v:%v = %v",
+								existingIdx, c.root.Arena.Get(existingIdx),
+								index, c.root.Arena.Get(index), val)
+						}
+					}
 				}
 			}
 		}

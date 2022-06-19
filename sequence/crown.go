@@ -48,9 +48,10 @@ func (c *CrownCluster) resolveIndexes() {
 func (c *CrownCluster) String() string {
 	r := make([]string, len(c.items))
 	for i := range c.items {
-		r[i] = c.stem.root.Arena.StringifyNode(c.items[i].Index)
+		r[i] = c.stem.root.Arena.Get(c.stem.indexes[c.items[i].Index]).String()
+		//r[i] = strings.Join(c.stem.root.Arena.StringifyInformation(c.items[i].Index), ",")
 	}
-	return strings.Join(r, " ")
+	return strings.Join(r, " | ")
 }
 
 func (c *CrownCluster) Volume() float32 {
@@ -59,6 +60,13 @@ func (c *CrownCluster) Volume() float32 {
 
 func (c *CrownCluster) ExpandBest(low float32, localIndex int) bool {
 	volume, nextVolume := float32(len(c.items))*c.rate, low*float32(len(c.items)+1)
+	//fmt.Printf("size: %v * rate: %v = %v ))(( new size: %v * low: %v = %v\n",
+	//	len(c.items),
+	//	c.rate,
+	//	float32(len(c.items))*c.rate,
+	//	len(c.items)+1,
+	//	low,
+	//	low*float32(len(c.items)+1))
 	if volume < nextVolume {
 		if c.rate == 0 || low < c.rate {
 			c.rate = low
@@ -86,9 +94,10 @@ func (c *CrownCluster) ExpandBest(low float32, localIndex int) bool {
 	return false
 }
 
+// SqueezeWorst finds worst compatible index
 func (c *CrownCluster) SqueezeWorst() (squeezedIndex int) {
-	squeezedIndex = -1
-	if len(c.items) > 2 {
+	//if len(c.items) > 2 {
+		squeezedIndex = -1
 		minIdx := 0
 		minAvg := c.items[0].ValueSum / float32(len(c.items))
 		for i := range c.items[1:] {
@@ -126,11 +135,11 @@ func (c *CrownCluster) SqueezeWorst() (squeezedIndex int) {
 			c.rate = newLow
 			return minIdx
 		}
-	}
+	//}
 	return
 }
 
-func (c *CrownCluster) Rate(stemIndex int) (low float32, sum float32) {
+func (c *CrownCluster) RateAgainst(stemIndex int) (low float32, sum float32) {
 	var start int
 	if len(c.items) > c.stem.root.limit {
 		start = len(c.items) - c.stem.root.limit
